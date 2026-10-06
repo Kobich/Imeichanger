@@ -11,12 +11,17 @@ import java.time.Instant
 /** Заглушка: хранит IMEI и историю в памяти, на устройство ничего не пишет. */
 class StubImeiRepository : ImeiRepository {
 
-    private val factoryImeis = mapOf(
-        SimSlot.SIM1 to "356938035643809",
-        SimSlot.SIM2 to "356938035643817",
+    override val factoryImeis: StateFlow<Map<SimSlot, String>> = MutableStateFlow(
+        mapOf(
+            SimSlot.SIM1 to "356938035643809",
+            SimSlot.SIM2 to "356938035643817",
+        ),
     )
 
-    private val _currentImeis = MutableStateFlow(factoryImeis)
+    // SIM2 уже изменён, чтобы на заглушке была видна кнопка сброса.
+    private val _currentImeis = MutableStateFlow(
+        factoryImeis.value + (SimSlot.SIM2 to "490154203237518"),
+    )
     override val currentImeis: StateFlow<Map<SimSlot, String>> = _currentImeis.asStateFlow()
 
     private val _history = MutableStateFlow<List<ImeiChangeRecord>>(emptyList())
@@ -37,6 +42,6 @@ class StubImeiRepository : ImeiRepository {
     }
 
     override suspend fun resetImei(slot: SimSlot) {
-        changeImei(slot, factoryImeis.getValue(slot))
+        changeImei(slot, factoryImeis.value.getValue(slot))
     }
 }

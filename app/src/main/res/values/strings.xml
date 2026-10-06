@@ -8,17 +8,28 @@
     <string name="imei_unknown">—</string>
     <string name="reset_imei">Сбросить IMEI</string>
 
-    <string name="manual_change_title">Ручная смена</string>
-    <string name="manual_change_label">Новый IMEI</string>
-    <string name="manual_change_counter">%1$d/%2$d</string>
-    <string name="manual_change_apply">Применить</string>
-    <string name="error_wrong_length">IMEI должен состоять из 15 цифр</string>
-    <string name="error_invalid_checksum">Неверная контрольная цифра</string>
+    <string name="ok">OK</string>
+    <string name="cancel">Отмена</string>
+
+    <string name="change_imei_title">Смена IMEI</string>
+    <string name="manual_input">Ручной ввод</string>
+    <string name="auto_change">Автоматическая смена</string>
+
+    <string name="manual_input_title">Ручной ввод IMEI</string>
+    <string name="manual_input_label">Новый IMEI</string>
+    <string name="manual_input_counter">%1$d/%2$d</string>
+    <string name="error_invalid_format">Данный IMEI не соответствует формату</string>
     <string name="error_same_as_current">Совпадает с текущим IMEI</string>
 
-    <string name="auto_change_title">Автоматическая смена</string>
-    <string name="auto_change_description">Сгенерировать случайный валидный IMEI с сохранением модели устройства (TAC)</string>
-    <string name="auto_change_apply">Сгенерировать и применить</string>
+    <string name="device_selection_title">Выбор устройства</string>
+    <string name="device_search_hint">Поиск по названию или компании</string>
+    <string name="device_name_with_company">%1$s (%2$s)</string>
+    <string name="device_search_empty">Ничего не найдено</string>
+    <string name="device_search_has_more">Показаны первые %1$d совпадений — уточните запрос</string>
+    <string name="device_catalog_error">Не удалось прочитать список устройств</string>
+
+    <string name="message_imei_accepted">Тест: IMEI %1$s принят</string>
+    <string name="message_device_accepted">Тест: выбрано %1$s (%2$s), IMEI %3$s</string>
 
     <string name="history_title">История изменений</string>
     <string name="history_empty">Изменений пока не было</string>

@@ -37,9 +37,14 @@ fun ImeichangerApp(
         state = state,
         onSimSelected = viewModel::onSimSelected,
         onResetImei = viewModel::onResetImei,
+        onManualInputClick = viewModel::onManualInputClick,
         onManualImeiChange = viewModel::onManualImeiChange,
-        onApplyManualImei = viewModel::onApplyManualImei,
-        onAutoChangeImei = viewModel::onAutoChangeImei,
+        onManualImeiConfirm = viewModel::onManualImeiConfirm,
+        onAutoChangeClick = viewModel::onAutoChangeClick,
+        onDeviceQueryChange = viewModel::onDeviceQueryChange,
+        onDeviceSelected = viewModel::onDeviceSelected,
+        onDialogDismiss = viewModel::onDialogDismiss,
+        onMessageShown = viewModel::onMessageShown,
         modifier = modifier,
     )
 }

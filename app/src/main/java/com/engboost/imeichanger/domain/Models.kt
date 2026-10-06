@@ -13,3 +13,10 @@ data class ImeiChangeRecord(
     val oldImei: String,
     val newImei: String,
 )
+
+/** Пара «устройство — соответствующий IMEI» из каталога для автоматической смены. */
+data class DeviceImei(
+    val name: String,
+    val company: String,
+    val imei: String,
+)
