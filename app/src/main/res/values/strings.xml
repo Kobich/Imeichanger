@@ -1,3 +1,27 @@
 <resources>
     <string name="app_name">Imeichanger</string>
+
+    <string name="sim_1">SIM 1</string>
+    <string name="sim_2">SIM 2</string>
+
+    <string name="current_imei_title">Текущий IMEI</string>
+    <string name="imei_unknown">—</string>
+    <string name="reset_imei">Сбросить IMEI</string>
+
+    <string name="manual_change_title">Ручная смена</string>
+    <string name="manual_change_label">Новый IMEI</string>
+    <string name="manual_change_counter">%1$d/%2$d</string>
+    <string name="manual_change_apply">Применить</string>
+    <string name="error_wrong_length">IMEI должен состоять из 15 цифр</string>
+    <string name="error_invalid_checksum">Неверная контрольная цифра</string>
+    <string name="error_same_as_current">Совпадает с текущим IMEI</string>
+
+    <string name="auto_change_title">Автоматическая смена</string>
+    <string name="auto_change_description">Сгенерировать случайный валидный IMEI с сохранением модели устройства (TAC)</string>
+    <string name="auto_change_apply">Сгенерировать и применить</string>
+
+    <string name="history_title">История изменений</string>
+    <string name="history_empty">Изменений пока не было</string>
+    <string name="history_old">Было: %1$s</string>
+    <string name="history_new">Стало: %1$s</string>
 </resources>

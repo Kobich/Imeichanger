@@ -5,12 +5,13 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.engboost.imeichanger.ui.main.MainScreen
+import com.engboost.imeichanger.ui.main.MainViewModel
 import com.engboost.imeichanger.ui.theme.ImeichangerTheme
 
 class MainActivity : ComponentActivity() {
@@ -19,29 +20,26 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             ImeichangerTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Greeting(
-                        name = "Android",
-                        modifier = Modifier.padding(innerPadding)
-                    )
-                }
+                ImeichangerApp(modifier = Modifier.fillMaxSize())
             }
         }
     }
 }
 
+/** Корень UI: единственное место, где живёт ViewModel. Ниже передаются только state и колбэки. */
 @Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
+fun ImeichangerApp(
+    modifier: Modifier = Modifier,
+    viewModel: MainViewModel = viewModel(factory = MainViewModel.Factory),
+) {
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
+    MainScreen(
+        state = state,
+        onSimSelected = viewModel::onSimSelected,
+        onResetImei = viewModel::onResetImei,
+        onManualImeiChange = viewModel::onManualImeiChange,
+        onApplyManualImei = viewModel::onApplyManualImei,
+        onAutoChangeImei = viewModel::onAutoChangeImei,
+        modifier = modifier,
     )
-}
-
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    ImeichangerTheme {
-        Greeting("Android")
-    }
 }
