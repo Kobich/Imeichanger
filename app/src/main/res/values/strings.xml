@@ -22,14 +22,15 @@
     <string name="error_same_as_current">Совпадает с текущим IMEI</string>
 
     <string name="device_selection_title">Выбор устройства</string>
-    <string name="device_search_hint">Поиск по названию или компании</string>
+    <string name="device_search_hint">Поиск по бренду, модели или TAC</string>
     <string name="device_name_with_company">%1$s (%2$s)</string>
+    <string name="device_tac">TAC %1$s</string>
     <string name="device_search_empty">Ничего не найдено</string>
     <string name="device_search_has_more">Показаны первые %1$d совпадений — уточните запрос</string>
     <string name="device_catalog_error">Не удалось прочитать список устройств</string>
 
     <string name="message_imei_accepted">Тест: IMEI %1$s принят</string>
-    <string name="message_device_accepted">Тест: выбрано %1$s (%2$s), IMEI %3$s</string>
+    <string name="message_device_accepted">Тест: %1$s (%2$s), сгенерирован IMEI %3$s</string>
 
     <string name="history_title">История изменений</string>
     <string name="history_empty">Изменений пока не было</string>

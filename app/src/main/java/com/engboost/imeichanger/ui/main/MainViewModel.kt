@@ -10,7 +10,7 @@ import com.engboost.imeichanger.data.AssetDeviceCatalog
 import com.engboost.imeichanger.data.DeviceCatalog
 import com.engboost.imeichanger.data.ImeiRepository
 import com.engboost.imeichanger.data.StubImeiRepository
-import com.engboost.imeichanger.domain.DeviceImei
+import com.engboost.imeichanger.domain.DeviceModel
 import com.engboost.imeichanger.domain.Imei
 import com.engboost.imeichanger.domain.SimSlot
 import kotlinx.coroutines.Job
@@ -124,9 +124,9 @@ class MainViewModel(
         searchDevices(query, debounce = true)
     }
 
-    fun onDeviceSelected(device: DeviceImei) {
+    fun onDeviceSelected(device: DeviceModel) {
         deviceSearchJob?.cancel()
-        onImeiChangeRequested(device.imei, device)
+        onImeiChangeRequested(Imei.generate(device.tac), device)
     }
 
     private fun searchDevices(query: String, debounce: Boolean) {
@@ -154,7 +154,7 @@ class MainViewModel(
     // endregion
 
     /** Заглушка: дальше здесь будет переход на подтверждение и диалог перезагрузки. */
-    private fun onImeiChangeRequested(imei: String, device: DeviceImei? = null) {
+    private fun onImeiChangeRequested(imei: String, device: DeviceModel? = null) {
         screen.update {
             it.copy(dialog = null, message = MainMessage.ImeiAccepted(imei = imei, device = device))
         }

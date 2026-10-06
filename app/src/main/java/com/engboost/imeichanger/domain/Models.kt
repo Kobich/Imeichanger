@@ -14,9 +14,10 @@ data class ImeiChangeRecord(
     val newImei: String,
 )
 
-/** Пара «устройство — соответствующий IMEI» из каталога для автоматической смены. */
-data class DeviceImei(
-    val name: String,
-    val company: String,
-    val imei: String,
+/** Модель устройства из TAC-каталога. IMEI генерируется из [tac] при выборе. */
+data class DeviceModel(
+    val brand: String,
+    val model: String,
+    /** Type Allocation Code — первые 8 цифр IMEI, задают модель устройства. */
+    val tac: String,
 )

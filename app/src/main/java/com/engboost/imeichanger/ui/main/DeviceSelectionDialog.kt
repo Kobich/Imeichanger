@@ -32,14 +32,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.engboost.imeichanger.R
-import com.engboost.imeichanger.domain.DeviceImei
+import com.engboost.imeichanger.domain.DeviceModel
 import com.engboost.imeichanger.ui.theme.ImeichangerTheme
 
 @Composable
 fun DeviceSelectionDialog(
     state: MainDialog.DeviceSelection,
     onQueryChange: (String) -> Unit,
-    onDeviceSelected: (DeviceImei) -> Unit,
+    onDeviceSelected: (DeviceModel) -> Unit,
     onDismiss: () -> Unit,
 ) {
     Dialog(
@@ -60,7 +60,7 @@ fun DeviceSelectionDialog(
 private fun DeviceSelectionContent(
     state: MainDialog.DeviceSelection,
     onQueryChange: (String) -> Unit,
-    onDeviceSelected: (DeviceImei) -> Unit,
+    onDeviceSelected: (DeviceModel) -> Unit,
     onDismiss: () -> Unit,
 ) {
     Scaffold(
@@ -112,19 +112,22 @@ private fun DeviceSelectionContent(
 
 @Composable
 private fun DeviceList(
-    devices: List<DeviceImei>,
+    devices: List<DeviceModel>,
     hasMore: Boolean,
-    onDeviceSelected: (DeviceImei) -> Unit,
+    onDeviceSelected: (DeviceModel) -> Unit,
 ) {
     LazyColumn(modifier = Modifier.fillMaxSize()) {
-        // Без key: в каталоге возможны повторяющиеся IMEI.
+        // Без key: в каталоге возможны повторяющиеся строки.
         items(devices) { device ->
             ListItem(
                 headlineContent = {
-                    Text(stringResource(R.string.device_name_with_company, device.name, device.company))
+                    Text(stringResource(R.string.device_name_with_company, device.displayName, device.brand))
                 },
                 supportingContent = {
-                    Text(text = device.imei, fontFamily = FontFamily.Monospace)
+                    Text(
+                        text = stringResource(R.string.device_tac, device.tac),
+                        fontFamily = FontFamily.Monospace,
+                    )
                 },
                 modifier = Modifier.clickable { onDeviceSelected(device) },
             )
@@ -142,6 +145,15 @@ private fun DeviceList(
         }
     }
 }
+
+/** В каталоге название обычно начинается с бренда («10.OR D»); в «Модель (Бренд)» он лишний. */
+internal val DeviceModel.displayName: String
+    get() = model
+        .takeIf { it.startsWith("$brand ", ignoreCase = true) }
+        ?.substring(brand.length + 1)
+        ?.trim()
+        ?.takeIf { it.isNotEmpty() }
+        ?: model
 
 @Composable
 private fun CenteredHint(text: String) {
@@ -165,10 +177,10 @@ private fun DeviceSelectionPreview() {
     ImeichangerTheme {
         DeviceSelectionContent(
             state = MainDialog.DeviceSelection(
-                query = "gal",
+                query = "10.or",
                 devices = listOf(
-                    DeviceImei("Galaxy S24", "Samsung", "351234562914176"),
-                    DeviceImei("Galaxy A54", "Samsung", "351234580669075"),
+                    DeviceModel(brand = "10.OR", model = "10.OR D", tac = "91161200"),
+                    DeviceModel(brand = "10.OR", model = "10.OR D2", tac = "91163440"),
                 ),
                 hasMore = true,
                 isLoading = false,

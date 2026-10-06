@@ -32,7 +32,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.engboost.imeichanger.R
-import com.engboost.imeichanger.domain.DeviceImei
+import com.engboost.imeichanger.domain.DeviceModel
 import com.engboost.imeichanger.domain.ImeiChangeRecord
 import com.engboost.imeichanger.domain.SimSlot
 import com.engboost.imeichanger.ui.theme.ImeichangerTheme
@@ -51,7 +51,7 @@ fun MainScreen(
     onManualImeiConfirm: () -> Unit,
     onAutoChangeClick: () -> Unit,
     onDeviceQueryChange: (String) -> Unit,
-    onDeviceSelected: (DeviceImei) -> Unit,
+    onDeviceSelected: (DeviceModel) -> Unit,
     onDialogDismiss: () -> Unit,
     onMessageShown: (Long) -> Unit,
     modifier: Modifier = Modifier,
@@ -268,7 +268,7 @@ private val SimSlot.labelRes: Int
 
 private fun MainMessage.text(context: android.content.Context): String = when (this) {
     is MainMessage.ImeiAccepted -> if (device != null) {
-        context.getString(R.string.message_device_accepted, device.name, device.company, imei)
+        context.getString(R.string.message_device_accepted, device.displayName, device.brand, imei)
     } else {
         context.getString(R.string.message_imei_accepted, imei)
     }

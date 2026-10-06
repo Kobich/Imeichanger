@@ -1,6 +1,6 @@
 package com.engboost.imeichanger.ui.main
 
-import com.engboost.imeichanger.domain.DeviceImei
+import com.engboost.imeichanger.domain.DeviceModel
 import com.engboost.imeichanger.domain.ImeiChangeRecord
 import com.engboost.imeichanger.domain.SimSlot
 
@@ -26,7 +26,7 @@ sealed interface MainDialog {
 
     data class DeviceSelection(
         val query: String = "",
-        val devices: List<DeviceImei> = emptyList(),
+        val devices: List<DeviceModel> = emptyList(),
         val hasMore: Boolean = false,
         val isLoading: Boolean = true,
         val loadFailed: Boolean = false,
@@ -42,10 +42,13 @@ enum class ManualImeiError {
 sealed interface MainMessage {
     val id: Long
 
-    /** Заглушка: IMEI прошёл проверку, дальше будет экран подтверждения. */
+    /**
+     * Заглушка: IMEI прошёл проверку (ручной ввод) или сгенерирован по TAC [device]
+     * (автоматическая смена), дальше будет экран подтверждения.
+     */
     data class ImeiAccepted(
         val imei: String,
-        val device: DeviceImei? = null,
+        val device: DeviceModel? = null,
         override val id: Long = System.nanoTime(),
     ) : MainMessage
 }

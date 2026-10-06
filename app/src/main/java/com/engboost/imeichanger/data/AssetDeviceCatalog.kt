@@ -1,44 +1,46 @@
 package com.engboost.imeichanger.data
 
 import android.content.res.AssetManager
-import com.engboost.imeichanger.domain.DeviceImei
+import com.engboost.imeichanger.domain.DeviceModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 
 /**
- * Каталог из CSV в assets (колонки: название, компания, IMEI).
+ * TAC-каталог из CSV-файлов в `assets/[directory]` (формат — см. [DeviceCsv]).
+ * Большой файл можно разбить на части: читаются все `*.csv` папки по алфавиту.
  *
- * Файл читается потоково на каждый запрос и не держится в памяти целиком: на сотнях тысяч
- * строк это дешевле по памяти. Если скорости не хватит — импортировать в Room с FTS.
+ * Файлы читаются потоково на каждый запрос и не держатся в памяти целиком. Если скорости
+ * на полном каталоге не хватит — импортировать в Room с FTS.
  */
 class AssetDeviceCatalog(
     private val assets: AssetManager,
-    private val fileName: String = "devices.csv",
+    private val directory: String = "tac",
 ) : DeviceCatalog {
 
     override suspend fun search(query: String, limit: Int): DeviceSearchResult =
         withContext(Dispatchers.IO) {
             val needle = query.trim()
-            val found = ArrayList<DeviceImei>(limit)
-            var hasMore = false
-            assets.open(fileName).bufferedReader().use { reader ->
-                for (line in reader.lineSequence()) {
-                    ensureActive()
-                    val device = DeviceCsv.parseLine(line) ?: continue
-                    if (!device.matches(needle)) continue
-                    if (found.size == limit) {
-                        hasMore = true
-                        break
+            val byTac = needle.isNotEmpty() && needle.all(Char::isDigit)
+            val found = ArrayList<DeviceModel>(limit)
+            val files = assets.list(directory).orEmpty().filter { it.endsWith(".csv") }.sorted()
+            for (file in files) {
+                assets.open("$directory/$file").bufferedReader().use { reader ->
+                    for (line in reader.lineSequence()) {
+                        ensureActive()
+                        val device = DeviceCsv.parseLine(line) ?: continue
+                        if (!device.matches(needle, byTac)) continue
+                        if (found.size == limit) return@withContext DeviceSearchResult(found, hasMore = true)
+                        found += device
                     }
-                    found += device
                 }
             }
-            DeviceSearchResult(found, hasMore)
+            DeviceSearchResult(found, hasMore = false)
         }
 
-    private fun DeviceImei.matches(needle: String): Boolean =
-        needle.isEmpty() ||
-            name.contains(needle, ignoreCase = true) ||
-            company.contains(needle, ignoreCase = true)
+    private fun DeviceModel.matches(needle: String, byTac: Boolean): Boolean = when {
+        needle.isEmpty() -> true
+        byTac && tac.startsWith(needle) -> true
+        else -> model.contains(needle, ignoreCase = true) || brand.contains(needle, ignoreCase = true)
+    }
 }
