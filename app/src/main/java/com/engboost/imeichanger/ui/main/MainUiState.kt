@@ -8,12 +8,10 @@ data class MainUiState(
     val selectedSlot: SimSlot = SimSlot.SIM1,
     val currentImei: String? = null,
     val factoryImei: String? = null,
-    /** История выбранного слота, новые записи сверху. */
     val history: List<ImeiChangeRecord> = emptyList(),
     val dialog: MainDialog? = null,
     val message: MainMessage? = null,
 ) {
-    /** Кнопка сброса показывается, только если IMEI отличается от «родного». */
     val canResetImei: Boolean
         get() = currentImei != null && factoryImei != null && currentImei != factoryImei
 }
@@ -38,14 +36,10 @@ enum class ManualImeiError {
     SAME_AS_CURRENT,
 }
 
-/** Одноразовое сообщение (snackbar). [id] различает повторные одинаковые сообщения. */
+/** One-shot snackbar message; [id] distinguishes repeated identical messages. */
 sealed interface MainMessage {
     val id: Long
 
-    /**
-     * Заглушка: IMEI прошёл проверку (ручной ввод) или сгенерирован по TAC [device]
-     * (автоматическая смена), дальше будет экран подтверждения.
-     */
     data class ImeiAccepted(
         val imei: String,
         val device: DeviceModel? = null,

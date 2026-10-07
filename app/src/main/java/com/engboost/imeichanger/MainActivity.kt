@@ -26,7 +26,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-/** Корень UI: единственное место, где живёт ViewModel. Ниже передаются только state и колбэки. */
+/** UI root: the only place that touches the ViewModel; children get state and callbacks. */
 @Composable
 fun ImeichangerApp(
     modifier: Modifier = Modifier,

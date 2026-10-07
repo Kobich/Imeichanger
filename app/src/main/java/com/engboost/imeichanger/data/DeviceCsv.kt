@@ -3,18 +3,13 @@ package com.engboost.imeichanger.data
 import com.engboost.imeichanger.domain.DeviceModel
 import com.engboost.imeichanger.domain.Imei
 
-/**
- * Разбор строк TAC-каталога `brand,tac,specs,model`, например
- * `10.OR,91161200,10.OR,10.OR D`. Если колонки model нет, берётся specs.
- */
+/** Parses TAC catalog rows `brand,tac,specs,model`, e.g. `10.OR,91161200,10.OR,10.OR D`. */
 object DeviceCsv {
-
     private const val BRAND = 0
     private const val TAC = 1
     private const val SPECS = 2
     private const val MODEL = 3
 
-    /** Заголовок, пустые и битые строки возвращают null. */
     fun parseLine(line: String): DeviceModel? {
         if (line.isBlank()) return null
         val fields = splitFields(line).map { it.trim() }
@@ -27,7 +22,7 @@ object DeviceCsv {
         return DeviceModel(brand = brand, model = model, tac = tac)
     }
 
-    /** Excel при сохранении срезает ведущие нули («440207» вместо «00440207») — возвращаем их. */
+    // Excel strips leading zeros from TACs: 440207 -> 00440207.
     private fun normalizeTac(raw: String): String? =
         raw.takeIf { it.isNotEmpty() && it.length <= Imei.TAC_LENGTH && it.all(Char::isDigit) }
             ?.padStart(Imei.TAC_LENGTH, '0')

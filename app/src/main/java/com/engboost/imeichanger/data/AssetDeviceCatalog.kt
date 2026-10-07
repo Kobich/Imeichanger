@@ -7,17 +7,13 @@ import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 
 /**
- * TAC-каталог из CSV-файлов в `assets/[directory]` (формат — см. [DeviceCsv]).
- * Большой файл можно разбить на части: читаются все `*.csv` папки по алфавиту.
- *
- * Файлы читаются потоково на каждый запрос и не держатся в памяти целиком. Если скорости
- * на полном каталоге не хватит — импортировать в Room с FTS.
+ * Streams every `*.csv` in `assets/[directory]` on each query instead of loading the whole
+ * catalog into memory, so the big file can be split into parts.
  */
 class AssetDeviceCatalog(
     private val assets: AssetManager,
     private val directory: String = "tac",
 ) : DeviceCatalog {
-
     override suspend fun search(query: String, limit: Int): DeviceSearchResult =
         withContext(Dispatchers.IO) {
             val needle = query.trim()

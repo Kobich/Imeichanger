@@ -36,7 +36,6 @@ fun ManualImeiDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        // Случайный тап мимо диалога не должен терять введённое.
         properties = DialogProperties(dismissOnClickOutside = false),
         title = { Text(stringResource(R.string.manual_input_title)) },
         text = {
@@ -65,7 +64,7 @@ fun ManualImeiDialog(
                     .fillMaxWidth()
                     .focusRequester(focusRequester),
             )
-            // Внутри контента диалога: к этому моменту поле уже привязано к FocusRequester.
+            // Must run after the field is attached to focusRequester.
             LaunchedEffect(Unit) { focusRequester.requestFocus() }
         },
         confirmButton = {

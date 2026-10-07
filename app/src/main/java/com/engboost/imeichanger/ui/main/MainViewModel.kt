@@ -28,8 +28,6 @@ class MainViewModel(
     private val repository: ImeiRepository,
     private val deviceCatalog: DeviceCatalog,
 ) : ViewModel() {
-
-    /** Состояние, которое принадлежит экрану, а не репозиторию. */
     private data class ScreenState(
         val selectedSlot: SimSlot = SimSlot.SIM1,
         val dialog: MainDialog? = null,
@@ -82,15 +80,12 @@ class MainViewModel(
         screen.update { it.copy(dialog = null) }
     }
 
-    // region Ручной ввод
-
     fun onManualInputClick() {
         screen.update { it.copy(dialog = MainDialog.ManualInput()) }
     }
 
     fun onManualImeiChange(text: String) {
         updateDialog<MainDialog.ManualInput> {
-            // Защита от дурака: только цифры (в т.ч. при вставке «35-6938…»), не длиннее IMEI.
             MainDialog.ManualInput(text = text.filter(Char::isDigit).take(Imei.LENGTH))
         }
     }
@@ -109,10 +104,6 @@ class MainViewModel(
             onImeiChangeRequested(imei)
         }
     }
-
-    // endregion
-
-    // region Автоматическая смена
 
     fun onAutoChangeClick() {
         screen.update { it.copy(dialog = MainDialog.DeviceSelection()) }
@@ -151,9 +142,7 @@ class MainViewModel(
         }
     }
 
-    // endregion
-
-    /** Заглушка: дальше здесь будет переход на подтверждение и диалог перезагрузки. */
+    // TODO: confirmation step, then repository.changeImei() and reboot dialog.
     private fun onImeiChangeRequested(imei: String, device: DeviceModel? = null) {
         screen.update {
             it.copy(dialog = null, message = MainMessage.ImeiAccepted(imei = imei, device = device))

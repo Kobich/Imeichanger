@@ -117,7 +117,7 @@ private fun DeviceList(
     onDeviceSelected: (DeviceModel) -> Unit,
 ) {
     LazyColumn(modifier = Modifier.fillMaxSize()) {
-        // Без key: в каталоге возможны повторяющиеся строки.
+        // No key: the catalog may contain duplicate rows.
         items(devices) { device ->
             ListItem(
                 headlineContent = {
@@ -146,7 +146,6 @@ private fun DeviceList(
     }
 }
 
-/** В каталоге название обычно начинается с бренда («10.OR D»); в «Модель (Бренд)» он лишний. */
 internal val DeviceModel.displayName: String
     get() = model
         .takeIf { it.startsWith("$brand ", ignoreCase = true) }

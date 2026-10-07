@@ -8,7 +8,7 @@ enum class ImeiError {
     INVALID_CHECKSUM,
 }
 
-/** IMEI = TAC (8 цифр) + серийный номер (6 цифр) + контрольная цифра по алгоритму Луна. */
+/** IMEI = TAC (8 digits) + serial number (6 digits) + Luhn check digit. */
 object Imei {
     const val LENGTH = 15
     const val TAC_LENGTH = 8
@@ -20,7 +20,6 @@ object Imei {
         else -> null
     }
 
-    /** Генерирует валидный IMEI для модели с данным [tac]: случайный серийный номер + контрольная цифра. */
     fun generate(tac: String, random: Random = Random.Default): String {
         require(tac.length == TAC_LENGTH && tac.all(Char::isDigit)) { "TAC must be $TAC_LENGTH digits: $tac" }
         val serial = buildString { repeat(LENGTH - TAC_LENGTH - 1) { append(random.nextInt(10)) } }
@@ -29,7 +28,6 @@ object Imei {
     }
 
     private fun luhnCheckDigit(body: String): Int {
-        // Справа налево удваиваем каждую вторую цифру, начиная с крайней правой цифры тела.
         val sum = body.reversed().mapIndexed { index, char ->
             val digit = char.digitToInt()
             if (index % 2 == 0) (digit * 2).let { if (it > 9) it - 9 else it } else digit

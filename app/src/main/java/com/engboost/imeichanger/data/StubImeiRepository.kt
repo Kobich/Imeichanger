@@ -8,9 +8,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import java.time.Instant
 
-/** Заглушка: хранит IMEI и историю в памяти, на устройство ничего не пишет. */
 class StubImeiRepository : ImeiRepository {
-
     override val factoryImeis: StateFlow<Map<SimSlot, String>> = MutableStateFlow(
         mapOf(
             SimSlot.SIM1 to "356938035643809",
@@ -18,7 +16,7 @@ class StubImeiRepository : ImeiRepository {
         ),
     )
 
-    // SIM2 уже изменён, чтобы на заглушке была видна кнопка сброса.
+    // SIM2 starts changed so the reset button is visible.
     private val _currentImeis = MutableStateFlow(
         factoryImeis.value + (SimSlot.SIM2 to "490154203237518"),
     )
