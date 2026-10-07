@@ -1,5 +1,16 @@
 package com.engboost.imeichanger
 
+// =====================================================================
+// TEMPORARY TEST BUILD (step 1: phoneEx descriptor probe)
+// ---------------------------------------------------------------------
+// MainActivity below launches the phoneEx TEST screen, not the real UI.
+// The real UI entry (ImeichangerApp -> MainScreen) is preserved,
+// commented out, at the bottom of this file. To restore the real app:
+//   1. delete / comment the test MainActivity + PhoneExScreen,
+//   2. uncomment the "ORIGINAL UI ENTRY" block at the bottom.
+// The real UI files (ui/main, data, domain) stay untouched in the repo.
+// =====================================================================
+
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -152,3 +163,37 @@ fun PhoneExScreen(modifier: Modifier = Modifier) {
         )
     }
 }
+
+// =====================================================================
+// ORIGINAL UI ENTRY (from the compose UI branch) — commented out during
+// the phoneEx test phase. Restore this (and the imports it needs:
+//   androidx.compose.runtime.getValue
+//   androidx.lifecycle.compose.collectAsStateWithLifecycle
+//   androidx.lifecycle.viewmodel.compose.viewModel
+//   com.engboost.imeichanger.ui.main.MainScreen
+//   com.engboost.imeichanger.ui.main.MainViewModel )
+// and point MainActivity.setContent { ImeichangerTheme { ImeichangerApp(...) } }
+// =====================================================================
+//
+// /** UI root: the only place that touches the ViewModel; children get state and callbacks. */
+// @Composable
+// fun ImeichangerApp(
+//     modifier: Modifier = Modifier,
+//     viewModel: MainViewModel = viewModel(factory = MainViewModel.Factory),
+// ) {
+//     val state by viewModel.uiState.collectAsStateWithLifecycle()
+//     MainScreen(
+//         state = state,
+//         onSimSelected = viewModel::onSimSelected,
+//         onResetImei = viewModel::onResetImei,
+//         onManualInputClick = viewModel::onManualInputClick,
+//         onManualImeiChange = viewModel::onManualImeiChange,
+//         onManualImeiConfirm = viewModel::onManualImeiConfirm,
+//         onAutoChangeClick = viewModel::onAutoChangeClick,
+//         onDeviceQueryChange = viewModel::onDeviceQueryChange,
+//         onDeviceSelected = viewModel::onDeviceSelected,
+//         onDialogDismiss = viewModel::onDialogDismiss,
+//         onMessageShown = viewModel::onMessageShown,
+//         modifier = modifier,
+//     )
+// }

@@ -1,3 +1,39 @@
 <resources>
     <string name="app_name">Imeichanger</string>
+
+    <string name="sim_1">SIM 1</string>
+    <string name="sim_2">SIM 2</string>
+
+    <string name="current_imei_title">Current IMEI</string>
+    <string name="imei_unknown">—</string>
+    <string name="reset_imei">Reset IMEI</string>
+
+    <string name="ok">OK</string>
+    <string name="cancel">Cancel</string>
+
+    <string name="change_imei_title">Change IMEI</string>
+    <string name="manual_input">Manual input</string>
+    <string name="auto_change">Automatic change</string>
+
+    <string name="manual_input_title">Enter IMEI</string>
+    <string name="manual_input_label">New IMEI</string>
+    <string name="manual_input_counter">%1$d/%2$d</string>
+    <string name="error_invalid_format">This IMEI does not match the format</string>
+    <string name="error_same_as_current">Same as the current IMEI</string>
+
+    <string name="device_selection_title">Select device</string>
+    <string name="device_search_hint">Search by brand, model or TAC</string>
+    <string name="device_name_with_company">%1$s (%2$s)</string>
+    <string name="device_tac">TAC %1$s</string>
+    <string name="device_search_empty">Nothing found</string>
+    <string name="device_search_has_more">Showing the first %1$d matches. Refine your search</string>
+    <string name="device_catalog_error">Failed to read the device list</string>
+
+    <string name="message_imei_accepted">Test: IMEI %1$s accepted</string>
+    <string name="message_device_accepted">Test: %1$s (%2$s), generated IMEI %3$s</string>
+
+    <string name="history_title">Change history</string>
+    <string name="history_empty">No changes yet</string>
+    <string name="history_old">Old: %1$s</string>
+    <string name="history_new">New: %1$s</string>
 </resources>
