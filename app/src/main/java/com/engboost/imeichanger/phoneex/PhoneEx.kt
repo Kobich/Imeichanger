@@ -15,10 +15,14 @@ const val SERVICE_DESCRIPTOR_DEFAULT = "com.mediatek.internal.telephony.IMtkTele
 /** sendAtCmd transaction code (from the docs). */
 const val TRANSACTION_sendAtCmd = 43
 
-/** Candidate descriptors for the result callback, most-likely first. */
+/**
+ * Candidate descriptors for the result callback, most-likely first.
+ * Confirmed on-device (probe): the real class is com.mediatek.telephony.IOemHookCallback
+ * (NOT the ...internal.telephony... variant).
+ */
 private val CALLBACK_DESCRIPTOR_CANDIDATES = listOf(
-    "com.mediatek.internal.telephony.IOemHookCallback",
     "com.mediatek.telephony.IOemHookCallback",
+    "com.mediatek.internal.telephony.IOemHookCallback",
 )
 
 /**
@@ -34,7 +38,7 @@ data class CallbackLayout(
 ) {
     companion object {
         val FALLBACK = CallbackLayout(
-            descriptor = CALLBACK_DESCRIPTOR_CANDIDATES.first(),
+            descriptor = "com.mediatek.telephony.IOemHookCallback",
             txnOnAtCmdResp = IBinder.FIRST_CALL_TRANSACTION + 0,
             txnOnAtUrcInd = IBinder.FIRST_CALL_TRANSACTION + 1,
             txnOnError = IBinder.FIRST_CALL_TRANSACTION + 2,
@@ -92,7 +96,8 @@ object PhoneExIntrospection {
                 val c = Class.forName(cn)
                 log("found class: $cn")
 
-                val descriptor = readStringField(c, "DESCRIPTOR") ?: ifaceName
+                val descriptorField = readStringField(c, "DESCRIPTOR")
+                val descriptor = descriptorField ?: ifaceName
                 val methods = c.declaredMethods.map { it.name }.distinct()
                 log("  methods: $methods")
 
@@ -103,17 +108,18 @@ object PhoneExIntrospection {
                         (f.get(null) as? Int)?.let { f.name to it }
                     }
                 txns.forEach { (n, v) -> log("  $n = $v") }
-                log("  DESCRIPTOR = $descriptor")
+                log("  DESCRIPTOR = $descriptor (readFromField=${descriptorField != null})")
 
                 val cmd = txns.firstOrNull { it.first.contains("AtCmdResp", true) }?.second
                 val urc = txns.firstOrNull { it.first.contains("AtUrcInd", true) }?.second
                 val err = txns.firstOrNull { it.first.contains("Error", true) }?.second
 
-                // Only treat as a real find if we actually read the descriptor or codes.
-                val anything = cmd != null || urc != null || err != null ||
-                    descriptor != ifaceName
-                if (!anything) {
-                    log("  (class present but no useful fields; keep looking)")
+                // A class counts as a real find if we actually read its DESCRIPTOR field
+                // or any TRANSACTION_* constant. Codes are often hidden by the hidden-API
+                // filter, so we fall back to the AIDL method order (0/1/2 offsets).
+                val isRealFind = descriptorField != null || txns.isNotEmpty()
+                if (!isRealFind) {
+                    log("  (class present but DESCRIPTOR/TRANSACTION_* not readable; keep looking)")
                     continue
                 }
 
