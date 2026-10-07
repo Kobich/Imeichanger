@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Privileged-permission allowlist for Imeichanger.
+
+  Required because android.permission.MODIFY_PHONE_STATE is signature|privileged.
+  A privileged system app is NOT granted such a permission unless it is also
+  listed here. Without this file the app is installed but the permission stays
+  denied ("not granted to package ... since it is not declared in the
+  permissions allowlist", or a boot-time warning on strict ROMs).
+
+  Deploy on the device/ROM at:
+      /system/etc/permissions/privapp-permissions-com.engboost.imeichanger.xml
+  (or /product/etc/permissions, /vendor/etc/permissions — matching the partition
+  the APK is installed into). File mode 0644, SELinux context u:object_r:system_file:s0.
+-->
+<permissions>
+    <privapp-permissions package="com.engboost.imeichanger">
+        <permission name="android.permission.MODIFY_PHONE_STATE"/>
+    </privapp-permissions>
+</permissions>
