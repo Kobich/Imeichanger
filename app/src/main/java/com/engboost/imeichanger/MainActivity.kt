@@ -85,22 +85,44 @@ fun PhoneExScreen(modifier: Modifier = Modifier) {
         return cb
     }
 
-    fun send(cmd: String) {
-        val slotInt = slot.toIntOrNull() ?: 0
+    // Single serial worker so commands run in a deterministic order (no racing threads).
+    val worker = remember { java.util.concurrent.Executors.newSingleThreadExecutor() }
+
+    fun runCmd(cmd: String, slotInt: Int) {
         val cb = newCallback()
-        Thread {
-            try {
-                PhoneExClient.callPhoneEx(
-                    slot = slotInt,
-                    token = 0L,
-                    atCmd = cmd,
-                    callback = cb,
-                    log = ::log,
-                )
-            } catch (e: Exception) {
-                log("ERROR send '$cmd': ${e.javaClass.simpleName}: ${e.message}")
-            }
-        }.start()
+        try {
+            PhoneExClient.callPhoneEx(
+                slot = slotInt,
+                token = 0L,
+                atCmd = cmd,
+                callback = cb,
+                log = ::log,
+            )
+        } catch (e: Exception) {
+            log("ERROR send '$cmd': ${e.javaClass.simpleName}: ${e.message}")
+        }
+    }
+
+    fun enqueue(cmd: String) {
+        val slotInt = slot.toIntOrNull() ?: 0
+        worker.execute { runCmd(cmd, slotInt) }
+    }
+
+    // Proper write sequence: radio OFF -> write IMEI -> reboot modem -> read back.
+    fun enqueueWriteSequence() {
+        val slotInt = slot.toIntOrNull() ?: 0
+        val target = imei.trim()
+        worker.execute {
+            log("=== write sequence start (imei=$target slot=$slotInt) ===")
+            runCmd("AT+CFUN=0", slotInt)
+            Thread.sleep(1000)
+            runCmd("AT+EGMR=1,7,\"$target\"", slotInt)
+            Thread.sleep(1000)
+            runCmd("AT+CFUN=1,1", slotInt)
+            Thread.sleep(3000)
+            runCmd("AT+EGMR=2,7", slotInt) // read back to verify
+            log("=== write sequence end ===")
+        }
     }
 
     Column(
@@ -139,17 +161,19 @@ fun PhoneExScreen(modifier: Modifier = Modifier) {
         ) { Text("1. Проба дескриптора") }
 
         Button(
-            onClick = { send(atCmd) },
+            onClick = { enqueue(atCmd) },
             modifier = Modifier.fillMaxWidth(),
         ) { Text("2. Отправить AT-команду (чтение/диагностика)") }
 
         Button(
-            onClick = {
-                send("AT+EGMR=1,7,\"$imei\"")
-                send("AT+CFUN=1,1")
-            },
+            onClick = { enqueue("AT+EGMR=2,7") },
             modifier = Modifier.fillMaxWidth(),
-        ) { Text("3. Записать IMEI + ресет модема") }
+        ) { Text("3. Прочитать IMEI (EGMR read)") }
+
+        Button(
+            onClick = { enqueueWriteSequence() },
+            modifier = Modifier.fillMaxWidth(),
+        ) { Text("4. Записать IMEI (CFUN=0 → запись → ресет → чтение)") }
 
         Button(
             onClick = { logText = "" },
