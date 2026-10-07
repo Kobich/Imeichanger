@@ -44,6 +44,14 @@ frida -U -n com.android.phone -l tools/frida/bypass-modify-phone-state.js
 Then launch the Imeichanger app and trigger the AT command. The Frida console
 prints a line every time it allows a `MODIFY_PHONE_STATE` check.
 
+## Confirmed target on this firmware
+
+The original author verified that on this ROM the check is
+`com.mediatek.phone.MtkPhoneInterfaceManagerEx.enforceModifyPermission`, running
+in the `com.android.phone` process. The script hooks that exact method (plus the
+generic `ContextImpl` funnel as a fallback), so attaching to `com.android.phone`
+is enough.
+
 ## If it still gets denied
 
 The denial is enforced in a different process. Find it:

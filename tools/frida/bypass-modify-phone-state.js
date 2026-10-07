@@ -114,8 +114,12 @@ Java.perform(function () {
             var c = Java.use(className);
             c[methodName].overloads.forEach(function (ov) {
                 ov.implementation = function () {
-                    console.log('[imei-bypass] ' + className + '.' + methodName + ' -> allowed');
-                    return;
+                    var args = Array.prototype.slice.call(arguments);
+                    if (callerAllowed()) {
+                        console.log(tag() + ' ' + className + '.' + methodName + ' -> allowed');
+                        return;
+                    }
+                    return ov.call.apply(ov, [this].concat(args));
                 };
             });
             console.log('[imei-bypass] hooked ' + className + '.' + methodName);
@@ -124,6 +128,10 @@ Java.perform(function () {
         }
     }
 
+    // Confirmed by the original author on this firmware: the enforcement is
+    // com.mediatek.phone.MtkPhoneInterfaceManagerEx.enforceModifyPermission,
+    // running in the com.android.phone process.
+    hookVoidIfPresent('com.mediatek.phone.MtkPhoneInterfaceManagerEx', 'enforceModifyPermission');
     hookVoidIfPresent('com.android.phone.PhoneInterfaceManager', 'enforceModifyPermission');
     hookVoidIfPresent('com.android.internal.telephony.TelephonyPermissions',
                       'enforceCallingOrSelfModifyPermissionOrCarrierPrivilege');
