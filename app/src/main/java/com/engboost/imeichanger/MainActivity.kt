@@ -1,16 +1,35 @@
 package com.engboost.imeichanger
 
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.engboost.imeichanger.phoneex.CallbackLayout
+import com.engboost.imeichanger.phoneex.OemHookCallback
+import com.engboost.imeichanger.phoneex.PhoneExClient
+import com.engboost.imeichanger.phoneex.PhoneExIntrospection
 import com.engboost.imeichanger.ui.theme.ImeichangerTheme
 
 class MainActivity : ComponentActivity() {
@@ -20,10 +39,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             ImeichangerTheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Greeting(
-                        name = "Android",
-                        modifier = Modifier.padding(innerPadding)
-                    )
+                    PhoneExScreen(modifier = Modifier.padding(innerPadding))
                 }
             }
         }
@@ -31,17 +47,108 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
-    )
-}
+fun PhoneExScreen(modifier: Modifier = Modifier) {
+    val mainHandler = remember { Handler(Looper.getMainLooper()) }
+    var logText by remember { mutableStateOf("") }
+    // Keep strong refs so async callbacks are not garbage-collected before the modem replies.
+    val liveCallbacks = remember { mutableListOf<OemHookCallback>() }
+    var layout by remember { mutableStateOf(CallbackLayout.FALLBACK) }
 
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    ImeichangerTheme {
-        Greeting("Android")
+    var imei by remember { mutableStateOf("353332990071343") }
+    var slot by remember { mutableStateOf("0") }
+    var atCmd by remember { mutableStateOf("AT+EGMR=2,7") }
+
+    fun log(line: String) {
+        mainHandler.post { logText = (logText + line + "\n").takeLast(8000) }
+    }
+
+    fun newCallback(): OemHookCallback {
+        val cb = OemHookCallback(
+            layout = layout,
+            onAtCmdResp = { s, t, c -> log("CB onAtCmdResp slot=$s token=$t cmd=$c") },
+            onAtUrcInd = { s, u -> log("CB onAtUrcInd slot=$s urc=$u") },
+            onError = { e -> log("CB onError: $e") },
+            log = ::log,
+        )
+        liveCallbacks.add(cb)
+        return cb
+    }
+
+    fun send(cmd: String) {
+        val slotInt = slot.toIntOrNull() ?: 0
+        val cb = newCallback()
+        Thread {
+            try {
+                PhoneExClient.callPhoneEx(
+                    slot = slotInt,
+                    token = 0L,
+                    atCmd = cmd,
+                    callback = cb,
+                    log = ::log,
+                )
+            } catch (e: Exception) {
+                log("ERROR send '$cmd': ${e.javaClass.simpleName}: ${e.message}")
+            }
+        }.start()
+    }
+
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(16.dp)
+            .verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Text("phoneEx / IMEI — шаг 1 (проба)")
+
+        OutlinedTextField(
+            value = slot, onValueChange = { slot = it },
+            label = { Text("Слот (0 = IMEI1, 1 = IMEI2)") },
+            modifier = Modifier.fillMaxWidth(),
+        )
+        OutlinedTextField(
+            value = imei, onValueChange = { imei = it },
+            label = { Text("IMEI для записи") },
+            modifier = Modifier.fillMaxWidth(),
+        )
+        OutlinedTextField(
+            value = atCmd, onValueChange = { atCmd = it },
+            label = { Text("Произвольная AT-команда") },
+            modifier = Modifier.fillMaxWidth(),
+        )
+
+        Button(
+            onClick = {
+                Thread {
+                    val l = PhoneExIntrospection.probe(::log)
+                    mainHandler.post { layout = l }
+                }.start()
+            },
+            modifier = Modifier.fillMaxWidth(),
+        ) { Text("1. Проба дескриптора") }
+
+        Button(
+            onClick = { send(atCmd) },
+            modifier = Modifier.fillMaxWidth(),
+        ) { Text("2. Отправить AT-команду (чтение/диагностика)") }
+
+        Button(
+            onClick = {
+                send("AT+EGMR=1,7,\"$imei\"")
+                send("AT+CFUN=1,1")
+            },
+            modifier = Modifier.fillMaxWidth(),
+        ) { Text("3. Записать IMEI + ресет модема") }
+
+        Button(
+            onClick = { logText = "" },
+            modifier = Modifier.fillMaxWidth(),
+        ) { Text("Очистить лог") }
+
+        Text(
+            text = if (logText.isEmpty()) "(лог пуст — нажми «Проба дескриптора»)" else logText,
+            fontFamily = FontFamily.Monospace,
+            fontSize = 11.sp,
+        )
     }
 }
