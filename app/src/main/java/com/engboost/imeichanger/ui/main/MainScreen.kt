@@ -9,7 +9,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
-import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
@@ -66,16 +65,14 @@ fun MainScreen(
 
     Scaffold(
         modifier = modifier,
-        topBar = {
-            CenterAlignedTopAppBar(title = { Text(stringResource(R.string.app_name)) })
-        },
         snackbarHost = { SnackbarHost(snackbarHostState) },
     ) { innerPadding ->
         LazyColumn(
             contentPadding = PaddingValues(
                 start = 16.dp,
                 end = 16.dp,
-                top = innerPadding.calculateTopPadding() + 8.dp,
+                // No top bar: keep a comfortable gap below the status bar inset.
+                top = innerPadding.calculateTopPadding() + 16.dp,
                 bottom = innerPadding.calculateBottomPadding() + 16.dp,
             ),
             verticalArrangement = Arrangement.spacedBy(12.dp),

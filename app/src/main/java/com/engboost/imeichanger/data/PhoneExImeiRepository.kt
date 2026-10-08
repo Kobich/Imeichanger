@@ -101,7 +101,10 @@ class PhoneExImeiRepository(
     /** Sends AT+EGMR=0,7 and parses the IMEI out of the modem response. */
     private suspend fun readImei(slot: SimSlot): String? = commandMutex.withLock {
         val resp = sendAndAwait(slot.toSlotInt(), "AT+EGMR=0,7")
-        resp?.let(::parseImei)
+        val imei = resp?.let(::parseImei)
+        // Diagnostic: see what each modem slot actually returns (logcat tag imei_phoneex).
+        Log.i(TAG, "readImei slot=$slot (int=${slot.toSlotInt()}) raw='$resp' parsed=$imei")
+        imei
     }
 
     /** Proven write sequence: radio off -> write -> reboot modem -> read back. */
