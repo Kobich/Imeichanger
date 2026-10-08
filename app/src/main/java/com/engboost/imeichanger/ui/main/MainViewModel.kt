@@ -9,7 +9,7 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import com.engboost.imeichanger.data.AssetDeviceCatalog
 import com.engboost.imeichanger.data.DeviceCatalog
 import com.engboost.imeichanger.data.ImeiRepository
-import com.engboost.imeichanger.data.StubImeiRepository
+import com.engboost.imeichanger.data.PhoneExImeiRepository
 import com.engboost.imeichanger.domain.DeviceModel
 import com.engboost.imeichanger.domain.Imei
 import com.engboost.imeichanger.domain.SimSlot
@@ -142,10 +142,15 @@ class MainViewModel(
         }
     }
 
-    // TODO: confirmation step, then repository.changeImei() and reboot dialog.
+    // TODO: confirmation step and reboot dialog.
     private fun onImeiChangeRequested(imei: String, device: DeviceModel? = null) {
-        screen.update {
-            it.copy(dialog = null, message = MainMessage.ImeiAccepted(imei = imei, device = device))
+        val slot = screen.value.selectedSlot
+        screen.update { it.copy(dialog = null) }
+        viewModelScope.launch {
+            repository.changeImei(slot, imei)
+            screen.update {
+                it.copy(message = MainMessage.ImeiAccepted(imei = imei, device = device))
+            }
         }
     }
 
@@ -165,7 +170,8 @@ class MainViewModel(
             initializer {
                 val application = checkNotNull(this[APPLICATION_KEY])
                 MainViewModel(
-                    repository = StubImeiRepository(),
+                    // Swap to StubImeiRepository() for UI preview without a device.
+                    repository = PhoneExImeiRepository(),
                     deviceCatalog = AssetDeviceCatalog(application.assets),
                 )
             }
