@@ -26,9 +26,10 @@ import java.util.concurrent.TimeUnit
 /**
  * Real [ImeiRepository] backed by the hidden MediaTek `phoneEx` service.
  *
- * Mirrors the sequences proven in the phoneEx test screen one-to-one:
- *   read  = AT+EGMR=0,7
- *   write = AT+CFUN=0 -> AT+EGMR=1,7,"<imei>" -> AT+CFUN=1,1 -> AT+EGMR=2,7 (verify)
+ * The EGMR *type* field selects which IMEI (7 = IMEI1, 10 = IMEI2); the binder
+ * slot arg is ignored by the modem, so everything runs on slot 0:
+ *   read  = AT+EGMR=0,<type>
+ *   write = AT+CFUN=0 -> AT+EGMR=1,<type>,"<imei>" -> AT+CFUN=1,1 -> read back
  *
  * [PhoneExClient.callPhoneEx] is fire-and-forget: the modem answers later on a
  * binder thread via [OemHookCallback.onAtCmdResp]. [sendAndAwait] bridges that
@@ -98,22 +99,25 @@ class PhoneExImeiRepository(
         _factoryImeis.update { if (it.containsKey(slot)) it else it + (slot to imei) }
     }
 
-    /** Sends AT+EGMR=0,7 and parses the IMEI out of the modem response. */
+    /**
+     * Reads one IMEI via AT+EGMR=0,<type>. The EGMR *type* selects which IMEI
+     * (7 = IMEI1, 10 = IMEI2) — the binder slot arg is ignored by the modem, so
+     * every command goes on PHONE_SLOT (0), which answers for both types.
+     */
     private suspend fun readImei(slot: SimSlot): String? = commandMutex.withLock {
-        val resp = sendAndAwait(slot.toSlotInt(), "AT+EGMR=0,7")
+        val resp = sendAndAwait(PHONE_SLOT, "AT+EGMR=0,${slot.egmrType}")
         val imei = resp?.let(::parseImei)
-        // Diagnostic: see what each modem slot actually returns (logcat tag imei_phoneex).
-        Log.i(TAG, "readImei slot=$slot (int=${slot.toSlotInt()}) raw='$resp' parsed=$imei")
+        Log.i(TAG, "readImei $slot (type=${slot.egmrType}) raw='$resp' parsed=$imei")
         imei
     }
 
     /** Proven write sequence: radio off -> write -> reboot modem -> read back. */
     private suspend fun writeImei(slot: SimSlot, imei: String) = commandMutex.withLock {
-        val s = slot.toSlotInt()
+        val type = slot.egmrType
         withContext(Dispatchers.IO) {
-            sendRaw(s, "AT+CFUN=0"); Thread.sleep(WRITE_STEP_DELAY_MS)
-            sendRaw(s, "AT+EGMR=1,7,\"$imei\""); Thread.sleep(WRITE_STEP_DELAY_MS)
-            sendRaw(s, "AT+CFUN=1,1"); Thread.sleep(MODEM_REBOOT_DELAY_MS)
+            sendRaw(PHONE_SLOT, "AT+CFUN=0"); Thread.sleep(WRITE_STEP_DELAY_MS)
+            sendRaw(PHONE_SLOT, "AT+EGMR=1,$type,\"$imei\""); Thread.sleep(WRITE_STEP_DELAY_MS)
+            sendRaw(PHONE_SLOT, "AT+CFUN=1,1"); Thread.sleep(MODEM_REBOOT_DELAY_MS)
         }
     }
 
@@ -157,12 +161,16 @@ class PhoneExImeiRepository(
         probed = true
     }
 
-    private fun SimSlot.toSlotInt(): Int = when (this) {
-        SimSlot.SIM1 -> 0
-        SimSlot.SIM2 -> 1
-    }
+    // EGMR field index per IMEI: 7 = IMEI1 (SIM1), 10 = IMEI2 (SIM2).
+    private val SimSlot.egmrType: Int
+        get() = when (this) {
+            SimSlot.SIM1 -> 7
+            SimSlot.SIM2 -> 10
+        }
 
     private companion object {
+        // EGMR ignores the binder slot; slot 0 answers for both IMEI types.
+        const val PHONE_SLOT = 0
         const val RESPONSE_TIMEOUT_MS = 5_000L
         const val WRITE_STEP_DELAY_MS = 1_000L
         const val MODEM_REBOOT_DELAY_MS = 3_000L
