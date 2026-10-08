@@ -67,7 +67,7 @@ fun PhoneExScreen(modifier: Modifier = Modifier) {
 
     var imei by remember { mutableStateOf("353332990071343") }
     var slot by remember { mutableStateOf("0") }
-    var atCmd by remember { mutableStateOf("AT+EGMR=2,7") }
+    var atCmd by remember { mutableStateOf("AT+EGMR=0,7") }
 
     fun log(line: String) {
         mainHandler.post { logText = (logText + line + "\n").takeLast(8000) }
@@ -166,7 +166,7 @@ fun PhoneExScreen(modifier: Modifier = Modifier) {
         ) { Text("2. Отправить AT-команду (чтение/диагностика)") }
 
         Button(
-            onClick = { enqueue("AT+EGMR=2,7") },
+            onClick = { enqueue("AT+EGMR=0,7") },
             modifier = Modifier.fillMaxWidth(),
         ) { Text("3. Прочитать IMEI (EGMR read)") }
 
