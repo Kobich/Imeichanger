@@ -29,6 +29,13 @@ sealed interface MainDialog {
         val isLoading: Boolean = true,
         val loadFailed: Boolean = false,
     ) : MainDialog
+
+    data class Confirm(
+        val slot: SimSlot,
+        val oldImei: String?,
+        val newImei: String,
+        val device: DeviceModel? = null,
+    ) : MainDialog
 }
 
 enum class ManualImeiError {

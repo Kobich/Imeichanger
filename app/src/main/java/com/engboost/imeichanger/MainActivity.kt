@@ -43,6 +43,7 @@ fun ImeichangerApp(
         onAutoChangeClick = viewModel::onAutoChangeClick,
         onDeviceQueryChange = viewModel::onDeviceQueryChange,
         onDeviceSelected = viewModel::onDeviceSelected,
+        onChangeConfirm = viewModel::onChangeConfirm,
         onDialogDismiss = viewModel::onDialogDismiss,
         onMessageShown = viewModel::onMessageShown,
         modifier = modifier,

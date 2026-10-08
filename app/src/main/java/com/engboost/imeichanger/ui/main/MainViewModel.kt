@@ -142,14 +142,26 @@ class MainViewModel(
         }
     }
 
-    // TODO: confirmation step and reboot dialog.
     private fun onImeiChangeRequested(imei: String, device: DeviceModel? = null) {
-        val slot = screen.value.selectedSlot
+        screen.update {
+            it.copy(
+                dialog = MainDialog.Confirm(
+                    slot = it.selectedSlot,
+                    oldImei = uiState.value.currentImei,
+                    newImei = imei,
+                    device = device,
+                ),
+            )
+        }
+    }
+
+    fun onChangeConfirm() {
+        val dialog = screen.value.dialog as? MainDialog.Confirm ?: return
         screen.update { it.copy(dialog = null) }
         viewModelScope.launch {
-            repository.changeImei(slot, imei)
+            repository.changeImei(dialog.slot, dialog.newImei)
             screen.update {
-                it.copy(message = MainMessage.ImeiAccepted(imei = imei, device = device))
+                it.copy(message = MainMessage.ImeiAccepted(imei = dialog.newImei, device = dialog.device))
             }
         }
     }

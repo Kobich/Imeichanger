@@ -51,6 +51,7 @@ fun MainScreen(
     onAutoChangeClick: () -> Unit,
     onDeviceQueryChange: (String) -> Unit,
     onDeviceSelected: (DeviceModel) -> Unit,
+    onChangeConfirm: () -> Unit,
     onDialogDismiss: () -> Unit,
     onMessageShown: (Long) -> Unit,
     modifier: Modifier = Modifier,
@@ -133,6 +134,11 @@ fun MainScreen(
             state = dialog,
             onQueryChange = onDeviceQueryChange,
             onDeviceSelected = onDeviceSelected,
+            onDismiss = onDialogDismiss,
+        )
+        is MainDialog.Confirm -> ConfirmImeiDialog(
+            state = dialog,
+            onConfirm = onChangeConfirm,
             onDismiss = onDialogDismiss,
         )
         null -> Unit
@@ -297,6 +303,7 @@ private fun MainScreenPreview() {
             onAutoChangeClick = {},
             onDeviceQueryChange = {},
             onDeviceSelected = {},
+            onChangeConfirm = {},
             onDialogDismiss = {},
             onMessageShown = {},
         )
