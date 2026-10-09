@@ -9,7 +9,9 @@ import com.engboost.imeichanger.phoneex.PhoneExClient
 import com.engboost.imeichanger.phoneex.PhoneExIntrospection
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -33,8 +35,8 @@ import java.util.concurrent.TimeUnit
  * [PhoneExClient.sendAtCommand] is fire-and-forget: the modem answers later on a
  * binder thread via [OemHookCallback.onAtCmdResp]. [sendAndAwait] bridges that
  * back to a blocking call with a [CountDownLatch] so the suspend API can return
- * a parsed result. All binder work runs on [Dispatchers.IO]; commands are
- * serialized by [commandMutex] so sequences never interleave.
+ * a parsed result. Every public operation runs as one [modemSession]: on
+ * [Dispatchers.IO] under [commandMutex], so sequences never interleave.
  */
 class PhoneExImeiRepository(
     private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO),
@@ -64,9 +66,9 @@ class PhoneExImeiRepository(
         scope.launch { refreshAll() }
     }
 
-    override suspend fun changeImei(slot: SimSlot, newImei: String) {
+    override suspend fun changeImei(slot: SimSlot, newImei: String): Unit = modemSession {
         val oldImei = _currentImeis.value[slot]
-        if (oldImei == newImei) return
+        if (oldImei == newImei) return@modemSession
         writeImei(slot, newImei)
         val readBack = readImei(slot) ?: newImei
         rememberOriginal(slot, oldImei ?: readBack)
@@ -86,7 +88,7 @@ class PhoneExImeiRepository(
         changeImei(slot, original)
     }
 
-    private suspend fun refreshAll() {
+    private suspend fun refreshAll(): Unit = modemSession {
         for (slot in SimSlot.entries) {
             val imei = readImei(slot) ?: continue
             rememberOriginal(slot, imei)
@@ -99,25 +101,37 @@ class PhoneExImeiRepository(
     }
 
     /**
+     * Runs [block] on [Dispatchers.IO] holding [commandMutex], so a whole sequence
+     * (e.g. write + read back) never interleaves with another one. The mutex is not
+     * reentrant: the helpers below must only be called from inside a session.
+     */
+    private suspend fun <T> modemSession(block: suspend () -> T): T =
+        commandMutex.withLock { withContext(Dispatchers.IO) { block() } }
+
+    /**
      * Reads one IMEI via AT+EGMR=0,<type>. The EGMR *type* selects which IMEI
      * (7 = IMEI1, 10 = IMEI2) — the binder slot arg is ignored by the modem, so
      * every command goes on PHONE_SLOT (0), which answers for both types.
      */
-    private suspend fun readImei(slot: SimSlot): String? = commandMutex.withLock {
+    private fun readImei(slot: SimSlot): String? {
         val resp = sendAndAwait(PHONE_SLOT, "AT+EGMR=0,${slot.egmrType}")
         val imei = resp?.let(::parseImei)
         Log.i(TAG, "readImei $slot (type=${slot.egmrType}) raw='$resp' parsed=$imei")
-        imei
+        return imei
     }
 
-    /** Proven write sequence: radio off -> write -> reboot modem -> read back. */
-    private suspend fun writeImei(slot: SimSlot, imei: String) = commandMutex.withLock {
+    /**
+     * Proven write sequence: radio off -> write -> reboot modem. Caller reads back.
+     * NonCancellable: aborting after CFUN=0 would leave the radio switched off.
+     */
+    private suspend fun writeImei(slot: SimSlot, imei: String) = withContext(NonCancellable) {
         val type = slot.egmrType
-        withContext(Dispatchers.IO) {
-            sendRaw(PHONE_SLOT, "AT+CFUN=0"); Thread.sleep(WRITE_STEP_DELAY_MS)
-            sendRaw(PHONE_SLOT, "AT+EGMR=1,$type,\"$imei\""); Thread.sleep(WRITE_STEP_DELAY_MS)
-            sendRaw(PHONE_SLOT, "AT+CFUN=1,1"); Thread.sleep(MODEM_REBOOT_DELAY_MS)
-        }
+        sendRaw(PHONE_SLOT, "AT+CFUN=0")
+        delay(WRITE_STEP_DELAY_MS)
+        sendRaw(PHONE_SLOT, "AT+EGMR=1,$type,\"$imei\"")
+        delay(WRITE_STEP_DELAY_MS)
+        sendRaw(PHONE_SLOT, "AT+CFUN=1,1")
+        delay(MODEM_REBOOT_DELAY_MS)
     }
 
     /** Blocking send that waits for the modem's onAtCmdResp (or times out). */
