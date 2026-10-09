@@ -23,7 +23,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.window.DialogProperties
 import com.engboost.imeichanger.R
 import com.engboost.imeichanger.domain.Imei
-import com.engboost.imeichanger.ui.theme.ImeichangerTheme
+import com.engboost.imeichanger.ui.theme.ImeiChangerTheme
 
 @Composable
 fun ManualImeiDialog(
@@ -89,7 +89,7 @@ private val ManualImeiError.messageRes: Int
 @Preview
 @Composable
 private fun ManualImeiDialogPreview() {
-    ImeichangerTheme {
+    ImeiChangerTheme {
         ManualImeiDialog(
             state = MainDialog.ManualInput(text = "35693803564380", error = ManualImeiError.INVALID_FORMAT),
             onValueChange = {},

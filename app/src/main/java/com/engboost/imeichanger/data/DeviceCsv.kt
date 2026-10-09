@@ -1,6 +1,6 @@
 package com.engboost.imeichanger.data
 
-import com.engboost.imeichanger.domain.DeviceModel
+import com.engboost.imeichanger.domain.Device
 import com.engboost.imeichanger.domain.Imei
 
 /** Parses TAC catalog rows `brand,tac,specs,model`, e.g. `10.OR,91161200,10.OR,10.OR D`. */
@@ -10,16 +10,16 @@ object DeviceCsv {
     private const val SPECS = 2
     private const val MODEL = 3
 
-    fun parseLine(line: String): DeviceModel? {
+    fun parseLine(line: String): Device? {
         if (line.isBlank()) return null
         val fields = splitFields(line).map { it.trim() }
         val brand = fields.getOrNull(BRAND).orEmpty()
         val tac = normalizeTac(fields.getOrNull(TAC).orEmpty()) ?: return null
-        val model = fields.getOrNull(MODEL)?.takeIf { it.isNotEmpty() }
+        val name = fields.getOrNull(MODEL)?.takeIf { it.isNotEmpty() }
             ?: fields.getOrNull(SPECS)?.takeIf { it.isNotEmpty() }
             ?: brand
-        if (model.isEmpty()) return null
-        return DeviceModel(brand = brand, model = model, tac = tac)
+        if (name.isEmpty()) return null
+        return Device(brand = brand, name = name, tac = tac)
     }
 
     // Excel strips leading zeros from TACs: 440207 -> 00440207.

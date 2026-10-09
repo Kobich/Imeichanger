@@ -10,7 +10,7 @@ import com.engboost.imeichanger.data.AssetDeviceCatalog
 import com.engboost.imeichanger.data.DeviceCatalog
 import com.engboost.imeichanger.data.ImeiRepository
 import com.engboost.imeichanger.data.PhoneExImeiRepository
-import com.engboost.imeichanger.domain.DeviceModel
+import com.engboost.imeichanger.domain.Device
 import com.engboost.imeichanger.domain.Imei
 import com.engboost.imeichanger.domain.SimSlot
 import kotlinx.coroutines.Job
@@ -28,31 +28,31 @@ class MainViewModel(
     private val repository: ImeiRepository,
     private val deviceCatalog: DeviceCatalog,
 ) : ViewModel() {
-    private data class ScreenState(
+    private data class LocalState(
         val selectedSlot: SimSlot = SimSlot.SIM1,
         val dialog: MainDialog? = null,
         val message: MainMessage? = null,
     )
 
-    private val screen = MutableStateFlow(ScreenState())
+    private val localState = MutableStateFlow(LocalState())
     private var deviceSearchJob: Job? = null
 
     val uiState: StateFlow<MainUiState> = combine(
-        screen,
+        localState,
         repository.currentImeis,
-        repository.factoryImeis,
+        repository.originalImeis,
         repository.history,
-    ) { screen, imeis, factoryImeis, history ->
-        val slot = screen.selectedSlot
+    ) { local, imeis, originalImeis, history ->
+        val slot = local.selectedSlot
         MainUiState(
             selectedSlot = slot,
             currentImei = imeis[slot],
-            factoryImei = factoryImeis[slot],
+            originalImei = originalImeis[slot],
             history = history
                 .filter { it.slot == slot }
                 .sortedByDescending { it.timestamp },
-            dialog = screen.dialog,
-            message = screen.message,
+            dialog = local.dialog,
+            message = local.message,
         )
     }.stateIn(
         scope = viewModelScope,
@@ -61,27 +61,27 @@ class MainViewModel(
     )
 
     fun onSimSelected(slot: SimSlot) {
-        screen.update { it.copy(selectedSlot = slot) }
+        localState.update { it.copy(selectedSlot = slot) }
     }
 
-    fun onResetImei() {
-        val slot = screen.value.selectedSlot
+    fun onResetImeiClick() {
+        val slot = localState.value.selectedSlot
         viewModelScope.launch {
             repository.resetImei(slot)
         }
     }
 
     fun onMessageShown(id: Long) {
-        screen.update { if (it.message?.id == id) it.copy(message = null) else it }
+        localState.update { if (it.message?.id == id) it.copy(message = null) else it }
     }
 
     fun onDialogDismiss() {
         deviceSearchJob?.cancel()
-        screen.update { it.copy(dialog = null) }
+        localState.update { it.copy(dialog = null) }
     }
 
     fun onManualInputClick() {
-        screen.update { it.copy(dialog = MainDialog.ManualInput()) }
+        localState.update { it.copy(dialog = MainDialog.ManualInput()) }
     }
 
     fun onManualImeiChange(text: String) {
@@ -90,8 +90,8 @@ class MainViewModel(
         }
     }
 
-    fun onManualImeiConfirm() {
-        val dialog = screen.value.dialog as? MainDialog.ManualInput ?: return
+    fun onManualImeiSubmit() {
+        val dialog = localState.value.dialog as? MainDialog.ManualInput ?: return
         val imei = dialog.text
         val error = when {
             Imei.validate(imei) != null -> ManualImeiError.INVALID_FORMAT
@@ -101,12 +101,12 @@ class MainViewModel(
         if (error != null) {
             updateDialog<MainDialog.ManualInput> { it.copy(error = error) }
         } else {
-            onImeiChangeRequested(imei)
+            showConfirmDialog(imei)
         }
     }
 
     fun onAutoChangeClick() {
-        screen.update { it.copy(dialog = MainDialog.DeviceSelection()) }
+        localState.update { it.copy(dialog = MainDialog.DeviceSelection()) }
         searchDevices(query = "", debounce = false)
     }
 
@@ -115,9 +115,9 @@ class MainViewModel(
         searchDevices(query, debounce = true)
     }
 
-    fun onDeviceSelected(device: DeviceModel) {
+    fun onDeviceSelected(device: Device) {
         deviceSearchJob?.cancel()
-        onImeiChangeRequested(Imei.generate(device.tac), device)
+        showConfirmDialog(Imei.generate(device.tac), device)
     }
 
     private fun searchDevices(query: String, debounce: Boolean) {
@@ -142,10 +142,10 @@ class MainViewModel(
         }
     }
 
-    private fun onImeiChangeRequested(imei: String, device: DeviceModel? = null) {
-        screen.update {
+    private fun showConfirmDialog(imei: String, device: Device? = null) {
+        localState.update {
             it.copy(
-                dialog = MainDialog.Confirm(
+                dialog = MainDialog.ConfirmChange(
                     slot = it.selectedSlot,
                     oldImei = uiState.value.currentImei,
                     newImei = imei,
@@ -155,19 +155,19 @@ class MainViewModel(
         }
     }
 
-    fun onChangeConfirm() {
-        val dialog = screen.value.dialog as? MainDialog.Confirm ?: return
-        screen.update { it.copy(dialog = null) }
+    fun onImeiChangeConfirm() {
+        val dialog = localState.value.dialog as? MainDialog.ConfirmChange ?: return
+        localState.update { it.copy(dialog = null) }
         viewModelScope.launch {
             repository.changeImei(dialog.slot, dialog.newImei)
-            screen.update {
-                it.copy(message = MainMessage.ImeiAccepted(imei = dialog.newImei, device = dialog.device))
+            localState.update {
+                it.copy(message = MainMessage.ImeiChanged(imei = dialog.newImei, device = dialog.device))
             }
         }
     }
 
     private inline fun <reified T : MainDialog> updateDialog(crossinline transform: (T) -> MainDialog) {
-        screen.update { state ->
+        localState.update { state ->
             val dialog = state.dialog as? T ?: return@update state
             state.copy(dialog = transform(dialog))
         }

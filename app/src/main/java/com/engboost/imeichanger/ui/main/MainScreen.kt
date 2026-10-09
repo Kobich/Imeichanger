@@ -31,10 +31,10 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.engboost.imeichanger.R
-import com.engboost.imeichanger.domain.DeviceModel
+import com.engboost.imeichanger.domain.Device
 import com.engboost.imeichanger.domain.ImeiChangeRecord
 import com.engboost.imeichanger.domain.SimSlot
-import com.engboost.imeichanger.ui.theme.ImeichangerTheme
+import com.engboost.imeichanger.ui.theme.ImeiChangerTheme
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -44,14 +44,14 @@ import java.time.format.DateTimeFormatter
 fun MainScreen(
     state: MainUiState,
     onSimSelected: (SimSlot) -> Unit,
-    onResetImei: () -> Unit,
+    onResetImeiClick: () -> Unit,
     onManualInputClick: () -> Unit,
     onManualImeiChange: (String) -> Unit,
-    onManualImeiConfirm: () -> Unit,
+    onManualImeiSubmit: () -> Unit,
     onAutoChangeClick: () -> Unit,
     onDeviceQueryChange: (String) -> Unit,
-    onDeviceSelected: (DeviceModel) -> Unit,
-    onChangeConfirm: () -> Unit,
+    onDeviceSelected: (Device) -> Unit,
+    onImeiChangeConfirm: () -> Unit,
     onDialogDismiss: () -> Unit,
     onMessageShown: (Long) -> Unit,
     modifier: Modifier = Modifier,
@@ -88,7 +88,7 @@ fun MainScreen(
                 CurrentImeiCard(
                     imei = state.currentImei,
                     canReset = state.canResetImei,
-                    onResetImei = onResetImei,
+                    onResetImeiClick = onResetImeiClick,
                 )
             }
             item {
@@ -127,7 +127,7 @@ fun MainScreen(
         is MainDialog.ManualInput -> ManualImeiDialog(
             state = dialog,
             onValueChange = onManualImeiChange,
-            onConfirm = onManualImeiConfirm,
+            onConfirm = onManualImeiSubmit,
             onDismiss = onDialogDismiss,
         )
         is MainDialog.DeviceSelection -> DeviceSelectionDialog(
@@ -136,9 +136,9 @@ fun MainScreen(
             onDeviceSelected = onDeviceSelected,
             onDismiss = onDialogDismiss,
         )
-        is MainDialog.Confirm -> ConfirmImeiDialog(
+        is MainDialog.ConfirmChange -> ConfirmChangeDialog(
             state = dialog,
-            onConfirm = onChangeConfirm,
+            onConfirm = onImeiChangeConfirm,
             onDismiss = onDialogDismiss,
         )
         null -> Unit
@@ -170,7 +170,7 @@ private fun SimSelector(
 private fun CurrentImeiCard(
     imei: String?,
     canReset: Boolean,
-    onResetImei: () -> Unit,
+    onResetImeiClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     SectionCard(title = stringResource(R.string.current_imei_title), modifier = modifier) {
@@ -181,7 +181,7 @@ private fun CurrentImeiCard(
         )
         if (canReset) {
             OutlinedButton(
-                onClick = onResetImei,
+                onClick = onResetImeiClick,
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Text(stringResource(R.string.reset_imei))
@@ -270,22 +270,22 @@ private val SimSlot.labelRes: Int
     }
 
 private fun MainMessage.text(context: android.content.Context): String = when (this) {
-    is MainMessage.ImeiAccepted -> if (device != null) {
-        context.getString(R.string.message_device_accepted, device.displayName, device.brand, imei)
+    is MainMessage.ImeiChanged -> if (device != null) {
+        context.getString(R.string.message_device_imei_changed, device.displayName, device.brand, imei)
     } else {
-        context.getString(R.string.message_imei_accepted, imei)
+        context.getString(R.string.message_imei_changed, imei)
     }
 }
 
 @Preview(showBackground = true)
 @Composable
 private fun MainScreenPreview() {
-    ImeichangerTheme {
+    ImeiChangerTheme {
         MainScreen(
             state = MainUiState(
                 selectedSlot = SimSlot.SIM1,
                 currentImei = "490154203237518",
-                factoryImei = "356938035643809",
+                originalImei = "356938035643809",
                 history = listOf(
                     ImeiChangeRecord(
                         slot = SimSlot.SIM1,
@@ -296,14 +296,14 @@ private fun MainScreenPreview() {
                 ),
             ),
             onSimSelected = {},
-            onResetImei = {},
+            onResetImeiClick = {},
             onManualInputClick = {},
             onManualImeiChange = {},
-            onManualImeiConfirm = {},
+            onManualImeiSubmit = {},
             onAutoChangeClick = {},
             onDeviceQueryChange = {},
             onDeviceSelected = {},
-            onChangeConfirm = {},
+            onImeiChangeConfirm = {},
             onDialogDismiss = {},
             onMessageShown = {},
         )

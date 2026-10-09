@@ -7,13 +7,13 @@ import android.os.Parcel
 import android.os.RemoteException
 import android.util.Log
 
-const val TAG = "imei_phoneex"
+private const val TAG = "imei_phoneex"
 
 /** Interface token of the vendor service that owns sendAtCmd (transaction 43). */
-const val SERVICE_DESCRIPTOR_DEFAULT = "com.mediatek.internal.telephony.IMtkTelephonyEx"
+private const val DEFAULT_SERVICE_DESCRIPTOR = "com.mediatek.internal.telephony.IMtkTelephonyEx"
 
 /** sendAtCmd transaction code (from the docs). */
-const val TRANSACTION_sendAtCmd = 43
+private const val TRANSACTION_SEND_AT_CMD = 43
 
 /**
  * Candidate descriptors for the result callback, most-likely first.
@@ -226,12 +226,12 @@ object PhoneExClient {
      * Blocks on the binder transaction, so call it off the main thread.
      */
     @Throws(RemoteException::class)
-    fun callPhoneEx(
+    fun sendAtCommand(
         slot: Int,
         token: Long,
         atCmd: String,
         callback: OemHookCallback,
-        serviceDescriptor: String = SERVICE_DESCRIPTOR_DEFAULT,
+        serviceDescriptor: String = DEFAULT_SERVICE_DESCRIPTOR,
         log: (String) -> Unit = { Log.i(TAG, it) },
     ) {
         val remote = PhoneExIntrospection.getServiceBinder("phoneEx")
@@ -246,8 +246,8 @@ object PhoneExClient {
             data.writeString(atCmd)
             data.writeStrongBinder(callback.asBinder())
 
-            log("-> transact($TRANSACTION_sendAtCmd) slot=$slot token=$token cmd=$atCmd")
-            remote.transact(TRANSACTION_sendAtCmd, data, reply, 0)
+            log("-> transact($TRANSACTION_SEND_AT_CMD) slot=$slot token=$token cmd=$atCmd")
+            remote.transact(TRANSACTION_SEND_AT_CMD, data, reply, 0)
 
             // Server does reply.writeNoException(); mirror it with readException().
             reply.readException()

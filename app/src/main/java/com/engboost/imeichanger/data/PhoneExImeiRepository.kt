@@ -7,7 +7,6 @@ import com.engboost.imeichanger.phoneex.CallbackLayout
 import com.engboost.imeichanger.phoneex.OemHookCallback
 import com.engboost.imeichanger.phoneex.PhoneExClient
 import com.engboost.imeichanger.phoneex.PhoneExIntrospection
-import com.engboost.imeichanger.phoneex.TAG
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -31,7 +30,7 @@ import java.util.concurrent.TimeUnit
  *   read  = AT+EGMR=0,<type>
  *   write = AT+CFUN=0 -> AT+EGMR=1,<type>,"<imei>" -> AT+CFUN=1,1 -> read back
  *
- * [PhoneExClient.callPhoneEx] is fire-and-forget: the modem answers later on a
+ * [PhoneExClient.sendAtCommand] is fire-and-forget: the modem answers later on a
  * binder thread via [OemHookCallback.onAtCmdResp]. [sendAndAwait] bridges that
  * back to a blocking call with a [CountDownLatch] so the suspend API can return
  * a parsed result. All binder work runs on [Dispatchers.IO]; commands are
@@ -44,10 +43,10 @@ class PhoneExImeiRepository(
     private val _currentImeis = MutableStateFlow<Map<SimSlot, String>>(emptyMap())
     override val currentImeis: StateFlow<Map<SimSlot, String>> = _currentImeis.asStateFlow()
 
-    // No separate "factory" value exists on the modem: seed it with the first
-    // IMEI we observe per slot, so reset has something to write back to.
-    private val _factoryImeis = MutableStateFlow<Map<SimSlot, String>>(emptyMap())
-    override val factoryImeis: StateFlow<Map<SimSlot, String>> = _factoryImeis.asStateFlow()
+    // The modem keeps no factory IMEI: remember the first one observed per slot,
+    // so reset has something to write back to.
+    private val _originalImeis = MutableStateFlow<Map<SimSlot, String>>(emptyMap())
+    override val originalImeis: StateFlow<Map<SimSlot, String>> = _originalImeis.asStateFlow()
 
     private val _history = MutableStateFlow<List<ImeiChangeRecord>>(emptyList())
     override val history: StateFlow<List<ImeiChangeRecord>> = _history.asStateFlow()
@@ -70,7 +69,7 @@ class PhoneExImeiRepository(
         if (oldImei == newImei) return
         writeImei(slot, newImei)
         val readBack = readImei(slot) ?: newImei
-        seedFactory(slot, oldImei ?: readBack)
+        rememberOriginal(slot, oldImei ?: readBack)
         _currentImeis.update { it + (slot to readBack) }
         _history.update {
             it + ImeiChangeRecord(
@@ -83,20 +82,20 @@ class PhoneExImeiRepository(
     }
 
     override suspend fun resetImei(slot: SimSlot) {
-        val factory = _factoryImeis.value[slot] ?: return
-        changeImei(slot, factory)
+        val original = _originalImeis.value[slot] ?: return
+        changeImei(slot, original)
     }
 
     private suspend fun refreshAll() {
         for (slot in SimSlot.entries) {
             val imei = readImei(slot) ?: continue
-            seedFactory(slot, imei)
+            rememberOriginal(slot, imei)
             _currentImeis.update { it + (slot to imei) }
         }
     }
 
-    private fun seedFactory(slot: SimSlot, imei: String) {
-        _factoryImeis.update { if (it.containsKey(slot)) it else it + (slot to imei) }
+    private fun rememberOriginal(slot: SimSlot, imei: String) {
+        _originalImeis.update { if (it.containsKey(slot)) it else it + (slot to imei) }
     }
 
     /**
@@ -133,7 +132,7 @@ class PhoneExImeiRepository(
             onError = { err -> Log.w(TAG, "phoneEx onError: $err"); latch.countDown() },
         )
         return try {
-            PhoneExClient.callPhoneEx(slot = slot, token = 0L, atCmd = cmd, callback = callback)
+            PhoneExClient.sendAtCommand(slot = slot, token = 0L, atCmd = cmd, callback = callback)
             if (!latch.await(RESPONSE_TIMEOUT_MS, TimeUnit.MILLISECONDS)) {
                 Log.w(TAG, "phoneEx timeout waiting for '$cmd'")
             }
@@ -149,7 +148,7 @@ class PhoneExImeiRepository(
         ensureProbed()
         val callback = OemHookCallback(layout = layout)
         try {
-            PhoneExClient.callPhoneEx(slot = slot, token = 0L, atCmd = cmd, callback = callback)
+            PhoneExClient.sendAtCommand(slot = slot, token = 0L, atCmd = cmd, callback = callback)
         } catch (e: Exception) {
             Log.e(TAG, "phoneEx send '$cmd' failed: ${e.javaClass.simpleName}: ${e.message}")
         }
@@ -169,6 +168,8 @@ class PhoneExImeiRepository(
         }
 
     private companion object {
+        const val TAG = "imei_phoneex"
+
         // EGMR ignores the binder slot; slot 0 answers for both IMEI types.
         const val PHONE_SLOT = 0
         const val RESPONSE_TIMEOUT_MS = 5_000L

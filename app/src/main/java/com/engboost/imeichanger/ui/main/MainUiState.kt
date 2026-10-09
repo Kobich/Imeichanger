@@ -1,19 +1,19 @@
 package com.engboost.imeichanger.ui.main
 
-import com.engboost.imeichanger.domain.DeviceModel
+import com.engboost.imeichanger.domain.Device
 import com.engboost.imeichanger.domain.ImeiChangeRecord
 import com.engboost.imeichanger.domain.SimSlot
 
 data class MainUiState(
     val selectedSlot: SimSlot = SimSlot.SIM1,
     val currentImei: String? = null,
-    val factoryImei: String? = null,
+    val originalImei: String? = null,
     val history: List<ImeiChangeRecord> = emptyList(),
     val dialog: MainDialog? = null,
     val message: MainMessage? = null,
 ) {
     val canResetImei: Boolean
-        get() = currentImei != null && factoryImei != null && currentImei != factoryImei
+        get() = currentImei != null && originalImei != null && currentImei != originalImei
 }
 
 sealed interface MainDialog {
@@ -24,17 +24,17 @@ sealed interface MainDialog {
 
     data class DeviceSelection(
         val query: String = "",
-        val devices: List<DeviceModel> = emptyList(),
+        val devices: List<Device> = emptyList(),
         val hasMore: Boolean = false,
         val isLoading: Boolean = true,
         val loadFailed: Boolean = false,
     ) : MainDialog
 
-    data class Confirm(
+    data class ConfirmChange(
         val slot: SimSlot,
         val oldImei: String?,
         val newImei: String,
-        val device: DeviceModel? = null,
+        val device: Device? = null,
     ) : MainDialog
 }
 
@@ -47,9 +47,9 @@ enum class ManualImeiError {
 sealed interface MainMessage {
     val id: Long
 
-    data class ImeiAccepted(
+    data class ImeiChanged(
         val imei: String,
-        val device: DeviceModel? = null,
+        val device: Device? = null,
         override val id: Long = System.nanoTime(),
     ) : MainMessage
 }

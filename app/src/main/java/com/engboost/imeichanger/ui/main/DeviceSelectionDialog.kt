@@ -32,14 +32,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.engboost.imeichanger.R
-import com.engboost.imeichanger.domain.DeviceModel
-import com.engboost.imeichanger.ui.theme.ImeichangerTheme
+import com.engboost.imeichanger.domain.Device
+import com.engboost.imeichanger.ui.theme.ImeiChangerTheme
 
 @Composable
 fun DeviceSelectionDialog(
     state: MainDialog.DeviceSelection,
     onQueryChange: (String) -> Unit,
-    onDeviceSelected: (DeviceModel) -> Unit,
+    onDeviceSelected: (Device) -> Unit,
     onDismiss: () -> Unit,
 ) {
     Dialog(
@@ -60,7 +60,7 @@ fun DeviceSelectionDialog(
 private fun DeviceSelectionContent(
     state: MainDialog.DeviceSelection,
     onQueryChange: (String) -> Unit,
-    onDeviceSelected: (DeviceModel) -> Unit,
+    onDeviceSelected: (Device) -> Unit,
     onDismiss: () -> Unit,
 ) {
     Scaffold(
@@ -112,16 +112,16 @@ private fun DeviceSelectionContent(
 
 @Composable
 private fun DeviceList(
-    devices: List<DeviceModel>,
+    devices: List<Device>,
     hasMore: Boolean,
-    onDeviceSelected: (DeviceModel) -> Unit,
+    onDeviceSelected: (Device) -> Unit,
 ) {
     LazyColumn(modifier = Modifier.fillMaxSize()) {
         // No key: the catalog may contain duplicate rows.
         items(devices) { device ->
             ListItem(
                 headlineContent = {
-                    Text(stringResource(R.string.device_name_with_company, device.displayName, device.brand))
+                    Text(stringResource(R.string.device_name_with_brand, device.displayName, device.brand))
                 },
                 supportingContent = {
                     Text(
@@ -146,13 +146,13 @@ private fun DeviceList(
     }
 }
 
-internal val DeviceModel.displayName: String
-    get() = model
+internal val Device.displayName: String
+    get() = name
         .takeIf { it.startsWith("$brand ", ignoreCase = true) }
         ?.substring(brand.length + 1)
         ?.trim()
         ?.takeIf { it.isNotEmpty() }
-        ?: model
+        ?: name
 
 @Composable
 private fun CenteredHint(text: String) {
@@ -173,13 +173,13 @@ private fun CenteredHint(text: String) {
 @Preview(showBackground = true)
 @Composable
 private fun DeviceSelectionPreview() {
-    ImeichangerTheme {
+    ImeiChangerTheme {
         DeviceSelectionContent(
             state = MainDialog.DeviceSelection(
                 query = "10.or",
                 devices = listOf(
-                    DeviceModel(brand = "10.OR", model = "10.OR D", tac = "91161200"),
-                    DeviceModel(brand = "10.OR", model = "10.OR D2", tac = "91163440"),
+                    Device(brand = "10.OR", name = "10.OR D", tac = "91161200"),
+                    Device(brand = "10.OR", name = "10.OR D2", tac = "91163440"),
                 ),
                 hasMore = true,
                 isLoading = false,

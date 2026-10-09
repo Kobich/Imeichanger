@@ -14,8 +14,8 @@ data class ImeiChangeRecord(
     val newImei: String,
 )
 
-data class DeviceModel(
+data class Device(
     val brand: String,
-    val model: String,
+    val name: String,
     val tac: String,
 )

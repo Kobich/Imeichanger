@@ -1,6 +1,6 @@
 package com.engboost.imeichanger.data
 
-import com.engboost.imeichanger.domain.DeviceModel
+import com.engboost.imeichanger.domain.Device
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -10,7 +10,7 @@ class DeviceCsvTest {
     @Test
     fun parsesCatalogLine() {
         assertEquals(
-            DeviceModel(brand = "10.OR", model = "10.OR D", tac = "91161200"),
+            Device(brand = "10.OR", name = "10.OR D", tac = "91161200"),
             DeviceCsv.parseLine("10.OR,91161200,10.OR,10.OR D"),
         )
     }
@@ -23,14 +23,14 @@ class DeviceCsvTest {
 
     @Test
     fun fallsBackToSpecsWhenModelIsMissing() {
-        assertEquals("10.OR", DeviceCsv.parseLine("10.OR,91161200,10.OR")?.model)
-        assertEquals("10.OR", DeviceCsv.parseLine("10.OR,91161200,10.OR,")?.model)
+        assertEquals("10.OR", DeviceCsv.parseLine("10.OR,91161200,10.OR")?.name)
+        assertEquals("10.OR", DeviceCsv.parseLine("10.OR,91161200,10.OR,")?.name)
     }
 
     @Test
     fun parsesSemicolonSeparatedAndQuotedFields() {
         assertEquals(
-            DeviceModel(brand = "Acme", model = "Phone \"X\", 5G", tac = "35123456"),
+            Device(brand = "Acme", name = "Phone \"X\", 5G", tac = "35123456"),
             DeviceCsv.parseLine("Acme;35123456;Acme;\"Phone \"\"X\"\", 5G\""),
         )
     }

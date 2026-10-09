@@ -14,11 +14,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
 import com.engboost.imeichanger.R
 import com.engboost.imeichanger.domain.SimSlot
-import com.engboost.imeichanger.ui.theme.ImeichangerTheme
+import com.engboost.imeichanger.ui.theme.ImeiChangerTheme
 
 @Composable
-fun ConfirmImeiDialog(
-    state: MainDialog.Confirm,
+fun ConfirmChangeDialog(
+    state: MainDialog.ConfirmChange,
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -44,7 +44,7 @@ fun ConfirmImeiDialog(
                 if (state.device != null) {
                     Text(
                         text = stringResource(
-                            R.string.device_name_with_company,
+                            R.string.device_name_with_brand,
                             state.device.displayName,
                             state.device.brand,
                         ),
@@ -75,10 +75,10 @@ private val SimSlot.labelRes: Int
 
 @Preview
 @Composable
-private fun ConfirmImeiDialogPreview() {
-    ImeichangerTheme {
-        ConfirmImeiDialog(
-            state = MainDialog.Confirm(
+private fun ConfirmChangeDialogPreview() {
+    ImeiChangerTheme {
+        ConfirmChangeDialog(
+            state = MainDialog.ConfirmChange(
                 slot = SimSlot.SIM1,
                 oldImei = "356938035643809",
                 newImei = "490154203237518",

@@ -23,7 +23,7 @@
 
     <string name="device_selection_title">Select device</string>
     <string name="device_search_hint">Search by brand, model or TAC</string>
-    <string name="device_name_with_company">%1$s (%2$s)</string>
+    <string name="device_name_with_brand">%1$s (%2$s)</string>
     <string name="device_tac">TAC %1$s</string>
     <string name="device_search_empty">Nothing found</string>
     <string name="device_search_has_more">Showing the first %1$d matches. Refine your search</string>
@@ -35,8 +35,8 @@
     <string name="confirm_change_new">New: %1$s</string>
     <string name="confirm_change_button">Change</string>
 
-    <string name="message_imei_accepted">IMEI changed: %1$s</string>
-    <string name="message_device_accepted">%1$s (%2$s): IMEI changed to %3$s</string>
+    <string name="message_imei_changed">IMEI changed: %1$s</string>
+    <string name="message_device_imei_changed">%1$s (%2$s): IMEI changed to %3$s</string>
 
     <string name="history_title">Change history</string>
     <string name="history_empty">No changes yet</string>
