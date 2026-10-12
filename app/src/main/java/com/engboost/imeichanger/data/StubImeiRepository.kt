@@ -25,6 +25,8 @@ class StubImeiRepository : ImeiRepository {
     private val _history = MutableStateFlow<List<ImeiChangeRecord>>(emptyList())
     override val history: StateFlow<List<ImeiChangeRecord>> = _history.asStateFlow()
 
+    override val isBusy: StateFlow<Boolean> = MutableStateFlow(false)
+
     override suspend fun changeImei(slot: SimSlot, newImei: String) {
         val oldImei = _currentImeis.value.getValue(slot)
         if (oldImei == newImei) return

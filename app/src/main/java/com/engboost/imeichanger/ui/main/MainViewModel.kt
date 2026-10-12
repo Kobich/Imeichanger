@@ -44,7 +44,8 @@ class MainViewModel(
         repository.currentImeis,
         repository.originalImeis,
         repository.history,
-    ) { local, imeis, originalImeis, history ->
+        repository.isBusy,
+    ) { local, imeis, originalImeis, history, isBusy ->
         val slot = local.selectedSlot
         MainUiState(
             selectedSlot = slot,
@@ -55,6 +56,7 @@ class MainViewModel(
                 .sortedByDescending { it.timestamp },
             dialog = local.dialog,
             message = local.message,
+            isBusy = isBusy,
         )
     }.stateIn(
         scope = viewModelScope,

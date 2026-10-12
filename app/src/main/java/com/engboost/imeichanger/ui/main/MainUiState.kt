@@ -11,6 +11,7 @@ data class MainUiState(
     val history: List<ImeiChangeRecord> = emptyList(),
     val dialog: MainDialog? = null,
     val message: MainMessage? = null,
+    val isBusy: Boolean = false,
 ) {
     val canResetImei: Boolean
         get() = currentImei != null && originalImei != null && currentImei != originalImei

@@ -12,9 +12,12 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
@@ -57,6 +60,10 @@ class PhoneExImeiRepository(
     override val history: StateFlow<List<ImeiChangeRecord>> = _history.asStateFlow()
 
     private val commandMutex = Mutex()
+
+    // Sessions running or waiting for commandMutex.
+    private val activeSessions = MutableStateFlow(0)
+    override val isBusy: Flow<Boolean> = activeSessions.map { it > 0 }.distinctUntilChanged()
 
     // Discovered once via reflection probe, then reused for every callback.
     @Volatile
@@ -125,8 +132,14 @@ class PhoneExImeiRepository(
      * (e.g. write + read back) never interleaves with another one. The mutex is not
      * reentrant: the helpers below must only be called from inside a session.
      */
-    private suspend fun <T> modemSession(block: suspend () -> T): T =
-        commandMutex.withLock { withContext(Dispatchers.IO) { block() } }
+    private suspend fun <T> modemSession(block: suspend () -> T): T {
+        activeSessions.update { it + 1 }
+        try {
+            return commandMutex.withLock { withContext(Dispatchers.IO) { block() } }
+        } finally {
+            activeSessions.update { it - 1 }
+        }
+    }
 
     /**
      * Reads one IMEI via AT+EGMR=0,<type>. The EGMR *type* selects which IMEI
