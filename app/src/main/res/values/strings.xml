@@ -21,12 +21,13 @@
     <string name="error_invalid_format">This IMEI does not match the format</string>
     <string name="error_same_as_current">Same as the current IMEI</string>
 
-    <string name="device_selection_title">Select device</string>
-    <string name="device_search_hint">Search by brand, model or TAC</string>
+    <string name="back">Back</string>
+    <string name="device_selection_brand_title">Select brand</string>
+    <string name="device_search_brand_hint">Search brand</string>
+    <string name="device_search_model_hint">Search model</string>
     <string name="device_name_with_brand">%1$s (%2$s)</string>
     <string name="device_tac">TAC %1$s</string>
     <string name="device_search_empty">Nothing found</string>
-    <string name="device_search_has_more">Showing the first %1$d matches. Refine your search</string>
     <string name="device_catalog_error">Failed to read the device list</string>
 
     <string name="confirm_change_title">Change IMEI?</string>
@@ -45,4 +46,12 @@
     <string name="history_empty">No changes yet</string>
     <string name="history_old">Old: %1$s</string>
     <string name="history_new">New: %1$s</string>
+    <plurals name="brand_model_count">
+        <item quantity="one">%1$d model</item>
+        <item quantity="other">%1$d models</item>
+    </plurals>
+    <plurals name="model_tac_count">
+        <item quantity="one">%1$d TAC</item>
+        <item quantity="other">%1$d TACs</item>
+    </plurals>
 </resources>

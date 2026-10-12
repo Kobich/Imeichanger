@@ -1,42 +1,39 @@
 package com.engboost.imeichanger.data
 
 import android.content.res.AssetManager
-import com.engboost.imeichanger.domain.Device
+import com.engboost.imeichanger.domain.Brand
+import com.engboost.imeichanger.domain.PhoneModel
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
 /**
- * Streams every `*.csv` in `assets/[directory]` on each query instead of loading the whole
- * catalog into memory, so the big file can be split into parts.
+ * Reads every `*.csv` in `assets/[directory]` once, on first use, and keeps the
+ * grouped [CatalogIndex] in memory. The catalog may be split into several files.
  */
 class AssetDeviceCatalog(
     private val assets: AssetManager,
     private val directory: String = "tac",
 ) : DeviceCatalog {
-    override suspend fun search(query: String, limit: Int): DeviceSearchResult =
-        withContext(Dispatchers.IO) {
-            val needle = query.trim()
-            val byTac = needle.isNotEmpty() && needle.all(Char::isDigit)
-            val found = ArrayList<Device>(limit)
-            val files = assets.list(directory).orEmpty().filter { it.endsWith(".csv") }.sorted()
-            for (file in files) {
-                assets.open("$directory/$file").bufferedReader().use { reader ->
-                    for (line in reader.lineSequence()) {
-                        ensureActive()
-                        val device = DeviceCsv.parseLine(line) ?: continue
-                        if (!device.matches(needle, byTac)) continue
-                        if (found.size == limit) return@withContext DeviceSearchResult(found, hasMore = true)
-                        found += device
-                    }
-                }
-            }
-            DeviceSearchResult(found, hasMore = false)
-        }
+    private val loadMutex = Mutex()
+    private var index: CatalogIndex? = null
 
-    private fun Device.matches(needle: String, byTac: Boolean): Boolean = when {
-        needle.isEmpty() -> true
-        byTac && tac.startsWith(needle) -> true
-        else -> name.contains(needle, ignoreCase = true) || brand.contains(needle, ignoreCase = true)
+    override suspend fun brands(): List<Brand> = index().brands
+
+    override suspend fun models(brand: String): List<PhoneModel> = index().models(brand)
+
+    private suspend fun index(): CatalogIndex = loadMutex.withLock {
+        index ?: withContext(Dispatchers.IO) { load() }.also { index = it }
+    }
+
+    private fun load(): CatalogIndex {
+        val files = assets.list(directory).orEmpty().filter { it.endsWith(".csv") }.sorted()
+        val devices = files.asSequence().flatMap { file ->
+            assets.open("$directory/$file").bufferedReader().use { reader ->
+                reader.readLines().mapNotNull(DeviceCsv::parseLine)
+            }
+        }
+        return CatalogIndex(devices)
     }
 }

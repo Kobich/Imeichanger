@@ -36,8 +36,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.engboost.imeichanger.R
-import com.engboost.imeichanger.domain.Device
+import com.engboost.imeichanger.domain.Brand
 import com.engboost.imeichanger.domain.ImeiChangeRecord
+import com.engboost.imeichanger.domain.PhoneModel
 import com.engboost.imeichanger.domain.SimSlot
 import com.engboost.imeichanger.ui.theme.ImeiChangerTheme
 import java.time.Instant
@@ -55,7 +56,9 @@ fun MainScreen(
     onManualImeiSubmit: () -> Unit,
     onAutoChangeClick: () -> Unit,
     onDeviceQueryChange: (String) -> Unit,
-    onDeviceSelected: (Device) -> Unit,
+    onBrandSelected: (Brand) -> Unit,
+    onModelSelected: (PhoneModel) -> Unit,
+    onDeviceSelectionBack: () -> Unit,
     onImeiChangeConfirm: () -> Unit,
     onDialogDismiss: () -> Unit,
     onMessageShown: (Long) -> Unit,
@@ -138,7 +141,9 @@ fun MainScreen(
         is MainDialog.DeviceSelection -> DeviceSelectionDialog(
             state = dialog,
             onQueryChange = onDeviceQueryChange,
-            onDeviceSelected = onDeviceSelected,
+            onBrandSelected = onBrandSelected,
+            onModelSelected = onModelSelected,
+            onBack = onDeviceSelectionBack,
             onDismiss = onDialogDismiss,
         )
         is MainDialog.ConfirmChange -> ConfirmChangeDialog(
@@ -334,7 +339,9 @@ private fun MainScreenPreview() {
             onManualImeiSubmit = {},
             onAutoChangeClick = {},
             onDeviceQueryChange = {},
-            onDeviceSelected = {},
+            onBrandSelected = {},
+            onModelSelected = {},
+            onDeviceSelectionBack = {},
             onImeiChangeConfirm = {},
             onDialogDismiss = {},
             onMessageShown = {},

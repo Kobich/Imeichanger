@@ -11,11 +11,12 @@ import com.engboost.imeichanger.data.DeviceCatalog
 import com.engboost.imeichanger.data.ImeiRepository
 import com.engboost.imeichanger.data.ImeiStorage
 import com.engboost.imeichanger.data.PhoneExImeiRepository
+import com.engboost.imeichanger.domain.Brand
 import com.engboost.imeichanger.domain.Device
 import com.engboost.imeichanger.domain.Imei
+import com.engboost.imeichanger.domain.PhoneModel
 import com.engboost.imeichanger.domain.SimSlot
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -37,7 +38,7 @@ class MainViewModel(
     )
 
     private val localState = MutableStateFlow(LocalState())
-    private var deviceSearchJob: Job? = null
+    private var catalogJob: Job? = null
 
     val uiState: StateFlow<MainUiState> = combine(
         localState,
@@ -80,7 +81,7 @@ class MainViewModel(
     }
 
     fun onDialogDismiss() {
-        deviceSearchJob?.cancel()
+        catalogJob?.cancel()
         localState.update { it.copy(dialog = null) }
     }
 
@@ -111,36 +112,61 @@ class MainViewModel(
 
     fun onAutoChangeClick() {
         localState.update { it.copy(dialog = MainDialog.DeviceSelection()) }
-        searchDevices(query = "", debounce = false)
+        loadCatalog { DeviceSelectionPage(brands = deviceCatalog.brands()) }
     }
 
     fun onDeviceQueryChange(query: String) {
         updateDialog<MainDialog.DeviceSelection> { it.copy(query = query) }
-        searchDevices(query, debounce = true)
     }
 
-    fun onDeviceSelected(device: Device) {
-        deviceSearchJob?.cancel()
+    fun onBrandSelected(brand: Brand) {
+        updateDialog<MainDialog.DeviceSelection> {
+            it.copy(brand = brand.name, query = "", models = emptyList())
+        }
+        loadCatalog { DeviceSelectionPage(models = deviceCatalog.models(brand.name)) }
+    }
+
+    /** Back from the model list goes to the brand list; from the brand list it closes. */
+    fun onDeviceSelectionBack() {
+        val dialog = localState.value.dialog as? MainDialog.DeviceSelection ?: return
+        if (dialog.brand == null) {
+            onDialogDismiss()
+        } else {
+            catalogJob?.cancel()
+            updateDialog<MainDialog.DeviceSelection> {
+                it.copy(brand = null, query = "", models = emptyList(), isLoading = false, loadFailed = false)
+            }
+        }
+    }
+
+    fun onModelSelected(model: PhoneModel) {
+        catalogJob?.cancel()
+        // A model may have several TACs: any of them makes a plausible IMEI.
+        val device = Device(brand = model.brand, name = model.name, tac = model.tacs.random())
         showConfirmDialog(Imei.generate(device.tac), device)
     }
 
-    private fun searchDevices(query: String, debounce: Boolean) {
-        deviceSearchJob?.cancel()
-        deviceSearchJob = viewModelScope.launch {
-            if (debounce) delay(SEARCH_DEBOUNCE_MS)
+    private class DeviceSelectionPage(
+        val brands: List<Brand>? = null,
+        val models: List<PhoneModel>? = null,
+    )
+
+    private fun loadCatalog(load: suspend () -> DeviceSelectionPage) {
+        catalogJob?.cancel()
+        catalogJob = viewModelScope.launch {
             updateDialog<MainDialog.DeviceSelection> { it.copy(isLoading = true, loadFailed = false) }
-            val result = try {
-                deviceCatalog.search(query, SEARCH_LIMIT)
+            val page = try {
+                load()
             } catch (e: IOException) {
                 Log.e(TAG, "Device catalog read failed", e)
                 null
             }
             updateDialog<MainDialog.DeviceSelection> {
                 it.copy(
-                    devices = result?.devices.orEmpty(),
-                    hasMore = result?.hasMore ?: false,
+                    brands = page?.brands ?: it.brands,
+                    models = page?.models ?: it.models,
                     isLoading = false,
-                    loadFailed = result == null,
+                    loadFailed = page == null,
                 )
             }
         }
@@ -180,8 +206,6 @@ class MainViewModel(
 
     companion object {
         private const val TAG = "MainViewModel"
-        private const val SEARCH_DEBOUNCE_MS = 300L
-        private const val SEARCH_LIMIT = 200
 
         val Factory = viewModelFactory {
             initializer {

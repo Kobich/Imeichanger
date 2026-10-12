@@ -1,7 +1,9 @@
 package com.engboost.imeichanger.ui.main
 
+import com.engboost.imeichanger.domain.Brand
 import com.engboost.imeichanger.domain.Device
 import com.engboost.imeichanger.domain.ImeiChangeRecord
+import com.engboost.imeichanger.domain.PhoneModel
 import com.engboost.imeichanger.domain.SimSlot
 
 data class MainUiState(
@@ -23,13 +25,24 @@ sealed interface MainDialog {
         val error: ManualImeiError? = null,
     ) : MainDialog
 
+    /**
+     * Two pages: the brand list ([brand] == null), then the models of the chosen brand.
+     * [query] filters whichever list is shown.
+     */
     data class DeviceSelection(
+        val brand: String? = null,
         val query: String = "",
-        val devices: List<Device> = emptyList(),
-        val hasMore: Boolean = false,
+        val brands: List<Brand> = emptyList(),
+        val models: List<PhoneModel> = emptyList(),
         val isLoading: Boolean = true,
         val loadFailed: Boolean = false,
-    ) : MainDialog
+    ) : MainDialog {
+        val visibleBrands: List<Brand>
+            get() = brands.filter { it.name.contains(query.trim(), ignoreCase = true) }
+
+        val visibleModels: List<PhoneModel>
+            get() = models.filter { it.name.contains(query.trim(), ignoreCase = true) }
+    }
 
     data class ConfirmChange(
         val slot: SimSlot,

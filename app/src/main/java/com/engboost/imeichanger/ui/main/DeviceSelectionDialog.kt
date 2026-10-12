@@ -1,7 +1,6 @@
 package com.engboost.imeichanger.ui.main
 
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -13,6 +12,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
@@ -22,8 +23,11 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.ImeAction
@@ -32,24 +36,31 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.engboost.imeichanger.R
+import com.engboost.imeichanger.domain.Brand
 import com.engboost.imeichanger.domain.Device
+import com.engboost.imeichanger.domain.PhoneModel
 import com.engboost.imeichanger.ui.theme.ImeiChangerTheme
 
 @Composable
 fun DeviceSelectionDialog(
     state: MainDialog.DeviceSelection,
     onQueryChange: (String) -> Unit,
-    onDeviceSelected: (Device) -> Unit,
+    onBrandSelected: (Brand) -> Unit,
+    onModelSelected: (PhoneModel) -> Unit,
+    onBack: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     Dialog(
-        onDismissRequest = onDismiss,
+        // System back steps from the model list to the brand list before closing.
+        onDismissRequest = onBack,
         properties = DialogProperties(usePlatformDefaultWidth = false),
     ) {
         DeviceSelectionContent(
             state = state,
             onQueryChange = onQueryChange,
-            onDeviceSelected = onDeviceSelected,
+            onBrandSelected = onBrandSelected,
+            onModelSelected = onModelSelected,
+            onBack = onBack,
             onDismiss = onDismiss,
         )
     }
@@ -60,14 +71,27 @@ fun DeviceSelectionDialog(
 private fun DeviceSelectionContent(
     state: MainDialog.DeviceSelection,
     onQueryChange: (String) -> Unit,
-    onDeviceSelected: (Device) -> Unit,
+    onBrandSelected: (Brand) -> Unit,
+    onModelSelected: (PhoneModel) -> Unit,
+    onBack: () -> Unit,
     onDismiss: () -> Unit,
 ) {
+    val brand = state.brand
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.device_selection_title)) },
+                title = { Text(brand ?: stringResource(R.string.device_selection_brand_title)) },
+                navigationIcon = {
+                    if (brand != null) {
+                        IconButton(onClick = onBack) {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_arrow_back),
+                                contentDescription = stringResource(R.string.back),
+                            )
+                        }
+                    }
+                },
                 actions = {
                     TextButton(onClick = onDismiss) {
                         Text(stringResource(R.string.cancel))
@@ -84,7 +108,13 @@ private fun DeviceSelectionContent(
             OutlinedTextField(
                 value = state.query,
                 onValueChange = onQueryChange,
-                placeholder = { Text(stringResource(R.string.device_search_hint)) },
+                placeholder = {
+                    Text(
+                        stringResource(
+                            if (brand == null) R.string.device_search_brand_hint else R.string.device_search_model_hint,
+                        ),
+                    )
+                },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                 modifier = Modifier
@@ -98,12 +128,14 @@ private fun DeviceSelectionContent(
             }
             when {
                 state.loadFailed -> CenteredHint(stringResource(R.string.device_catalog_error))
-                !state.isLoading && state.devices.isEmpty() ->
-                    CenteredHint(stringResource(R.string.device_search_empty))
-                else -> DeviceList(
-                    devices = state.devices,
-                    hasMore = state.hasMore,
-                    onDeviceSelected = onDeviceSelected,
+                state.isLoading -> Unit
+                brand == null -> BrandList(
+                    brands = remember(state.brands, state.query) { state.visibleBrands },
+                    onBrandSelected = onBrandSelected,
+                )
+                else -> ModelList(
+                    models = remember(state.models, state.query) { state.visibleModels },
+                    onModelSelected = onModelSelected,
                 )
             }
         }
@@ -111,48 +143,72 @@ private fun DeviceSelectionContent(
 }
 
 @Composable
-private fun DeviceList(
-    devices: List<Device>,
-    hasMore: Boolean,
-    onDeviceSelected: (Device) -> Unit,
+private fun BrandList(
+    brands: List<Brand>,
+    onBrandSelected: (Brand) -> Unit,
 ) {
+    if (brands.isEmpty()) {
+        CenteredHint(stringResource(R.string.device_search_empty))
+        return
+    }
     LazyColumn(modifier = Modifier.fillMaxSize()) {
-        // No key: the catalog may contain duplicate rows.
-        items(devices) { device ->
+        items(brands, key = { it.name.lowercase() }) { brand ->
             ListItem(
-                headlineContent = {
-                    Text(stringResource(R.string.device_name_with_brand, device.displayName, device.brand))
-                },
+                headlineContent = { Text(brand.name) },
                 supportingContent = {
-                    Text(
-                        text = stringResource(R.string.device_tac, device.tac),
-                        fontFamily = FontFamily.Monospace,
-                    )
+                    Text(pluralStringResource(R.plurals.brand_model_count, brand.modelCount, brand.modelCount))
                 },
-                modifier = Modifier.clickable { onDeviceSelected(device) },
+                trailingContent = {
+                    Icon(painter = painterResource(R.drawable.ic_chevron_right), contentDescription = null)
+                },
+                modifier = Modifier.clickable { onBrandSelected(brand) },
             )
             HorizontalDivider()
-        }
-        if (hasMore) {
-            item {
-                Text(
-                    text = stringResource(R.string.device_search_has_more, devices.size),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(16.dp),
-                )
-            }
         }
     }
 }
 
-internal val Device.displayName: String
-    get() = name
+@Composable
+private fun ModelList(
+    models: List<PhoneModel>,
+    onModelSelected: (PhoneModel) -> Unit,
+) {
+    if (models.isEmpty()) {
+        CenteredHint(stringResource(R.string.device_search_empty))
+        return
+    }
+    LazyColumn(modifier = Modifier.fillMaxSize()) {
+        items(models, key = { it.name.lowercase() }) { model ->
+            ListItem(
+                headlineContent = { Text(model.displayName) },
+                supportingContent = {
+                    Text(
+                        text = model.tacs.singleOrNull()?.let { stringResource(R.string.device_tac, it) }
+                            ?: pluralStringResource(R.plurals.model_tac_count, model.tacs.size, model.tacs.size),
+                        fontFamily = FontFamily.Monospace,
+                    )
+                },
+                modifier = Modifier.clickable { onModelSelected(model) },
+            )
+            HorizontalDivider()
+        }
+    }
+}
+
+/** Model name without the brand prefix: "10.OR G2" under brand "10.OR" shows as "G2". */
+private fun stripBrand(brand: String, name: String): String =
+    name
         .takeIf { it.startsWith("$brand ", ignoreCase = true) }
         ?.substring(brand.length + 1)
         ?.trim()
         ?.takeIf { it.isNotEmpty() }
         ?: name
+
+internal val Device.displayName: String
+    get() = stripBrand(brand, name)
+
+private val PhoneModel.displayName: String
+    get() = stripBrand(brand, name)
 
 @Composable
 private fun CenteredHint(text: String) {
@@ -172,20 +228,39 @@ private fun CenteredHint(text: String) {
 
 @Preview(showBackground = true)
 @Composable
-private fun DeviceSelectionPreview() {
+private fun BrandPagePreview() {
     ImeiChangerTheme {
         DeviceSelectionContent(
             state = MainDialog.DeviceSelection(
-                query = "10.or",
-                devices = listOf(
-                    Device(brand = "10.OR", name = "10.OR D", tac = "91161200"),
-                    Device(brand = "10.OR", name = "10.OR D2", tac = "91163440"),
-                ),
-                hasMore = true,
+                brands = listOf(Brand(name = "10.OR", modelCount = 3), Brand(name = "Alcatel", modelCount = 41)),
                 isLoading = false,
             ),
             onQueryChange = {},
-            onDeviceSelected = {},
+            onBrandSelected = {},
+            onModelSelected = {},
+            onBack = {},
+            onDismiss = {},
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun ModelPagePreview() {
+    ImeiChangerTheme {
+        DeviceSelectionContent(
+            state = MainDialog.DeviceSelection(
+                brand = "10.OR",
+                models = listOf(
+                    PhoneModel(brand = "10.OR", name = "10.OR D", tacs = listOf("91161200")),
+                    PhoneModel(brand = "10.OR", name = "10.OR G2", tacs = listOf("35872810", "35872811")),
+                ),
+                isLoading = false,
+            ),
+            onQueryChange = {},
+            onBrandSelected = {},
+            onModelSelected = {},
+            onBack = {},
             onDismiss = {},
         )
     }
