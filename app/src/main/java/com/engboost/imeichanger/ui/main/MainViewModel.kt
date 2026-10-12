@@ -9,6 +9,7 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import com.engboost.imeichanger.data.AssetDeviceCatalog
 import com.engboost.imeichanger.data.DeviceCatalog
 import com.engboost.imeichanger.data.ImeiRepository
+import com.engboost.imeichanger.data.ImeiStorage
 import com.engboost.imeichanger.data.PhoneExImeiRepository
 import com.engboost.imeichanger.domain.Device
 import com.engboost.imeichanger.domain.Imei
@@ -22,6 +23,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.io.File
 import java.io.IOException
 
 class MainViewModel(
@@ -183,7 +185,9 @@ class MainViewModel(
                 val application = checkNotNull(this[APPLICATION_KEY])
                 MainViewModel(
                     // Swap to StubImeiRepository() for UI preview without a device.
-                    repository = PhoneExImeiRepository(),
+                    repository = PhoneExImeiRepository(
+                        storage = ImeiStorage(File(application.filesDir, "imei_state.json")),
+                    ),
                     deviceCatalog = AssetDeviceCatalog(application.assets),
                 )
             }

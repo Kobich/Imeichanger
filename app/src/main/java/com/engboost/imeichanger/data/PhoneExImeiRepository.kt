@@ -37,16 +37,19 @@ import java.util.concurrent.TimeUnit
  * back to a blocking call with a [CountDownLatch] so the suspend API can return
  * a parsed result. Every public operation runs as one [modemSession]: on
  * [Dispatchers.IO] under [commandMutex], so sequences never interleave.
+ *
+ * Original IMEIs and history are persisted in [storage] and restored on start.
  */
 class PhoneExImeiRepository(
+    private val storage: ImeiStorage,
     private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO),
 ) : ImeiRepository {
 
     private val _currentImeis = MutableStateFlow<Map<SimSlot, String>>(emptyMap())
     override val currentImeis: StateFlow<Map<SimSlot, String>> = _currentImeis.asStateFlow()
 
-    // The modem keeps no factory IMEI: remember the first one observed per slot,
-    // so reset has something to write back to.
+    // The modem keeps no factory IMEI: remember (and persist) the first one observed
+    // per slot, so reset has something to write back to even after a restart.
     private val _originalImeis = MutableStateFlow<Map<SimSlot, String>>(emptyMap())
     override val originalImeis: StateFlow<Map<SimSlot, String>> = _originalImeis.asStateFlow()
 
@@ -62,8 +65,9 @@ class PhoneExImeiRepository(
     private var probed = false
 
     init {
-        // Kick off an initial read of both slots so the UI shows real values.
-        scope.launch { refreshAll() }
+        // Restore saved state first so the stored originals win over what the modem
+        // reports now, then read both slots so the UI shows real values.
+        scope.launch { modemSession { restore(); refreshAll() } }
     }
 
     override suspend fun changeImei(slot: SimSlot, newImei: String): Unit = modemSession {
@@ -81,6 +85,7 @@ class PhoneExImeiRepository(
                 newImei = readBack,
             )
         }
+        persist()
     }
 
     override suspend fun resetImei(slot: SimSlot) {
@@ -88,16 +93,31 @@ class PhoneExImeiRepository(
         changeImei(slot, original)
     }
 
-    private suspend fun refreshAll(): Unit = modemSession {
-        for (slot in SimSlot.entries) {
-            val imei = readImei(slot) ?: continue
-            rememberOriginal(slot, imei)
-            _currentImeis.update { it + (slot to imei) }
-        }
+    private fun restore() {
+        val stored = storage.load()
+        _originalImeis.value = stored.originalImeis
+        _history.value = stored.history
     }
 
-    private fun rememberOriginal(slot: SimSlot, imei: String) {
-        _originalImeis.update { if (it.containsKey(slot)) it else it + (slot to imei) }
+    private fun refreshAll() {
+        var originalsChanged = false
+        for (slot in SimSlot.entries) {
+            val imei = readImei(slot) ?: continue
+            originalsChanged = rememberOriginal(slot, imei) || originalsChanged
+            _currentImeis.update { it + (slot to imei) }
+        }
+        if (originalsChanged) persist()
+    }
+
+    /** Returns true if [imei] became the slot's original (i.e. none was known yet). */
+    private fun rememberOriginal(slot: SimSlot, imei: String): Boolean {
+        if (_originalImeis.value.containsKey(slot)) return false
+        _originalImeis.update { it + (slot to imei) }
+        return true
+    }
+
+    private fun persist() {
+        storage.save(StoredImeiState(originalImeis = _originalImeis.value, history = _history.value))
     }
 
     /**
