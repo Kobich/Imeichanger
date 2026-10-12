@@ -51,7 +51,7 @@
         <item quantity="other">%1$d models</item>
     </plurals>
     <plurals name="model_tac_count">
-        <item quantity="one">%1$d TAC</item>
-        <item quantity="other">%1$d TACs</item>
+        <item quantity="one">%1$d TAC, tap to choose</item>
+        <item quantity="other">%1$d TACs, tap to choose</item>
     </plurals>
 </resources>

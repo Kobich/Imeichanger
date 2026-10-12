@@ -46,6 +46,7 @@ fun ImeiChangerApp(
         onModelSelected = viewModel::onModelSelected,
         onDeviceSelectionBack = viewModel::onDeviceSelectionBack,
         onImeiChangeConfirm = viewModel::onImeiChangeConfirm,
+        onImeiChangeCancel = viewModel::onImeiChangeCancel,
         onDialogDismiss = viewModel::onDialogDismiss,
         onMessageShown = viewModel::onMessageShown,
         modifier = modifier,

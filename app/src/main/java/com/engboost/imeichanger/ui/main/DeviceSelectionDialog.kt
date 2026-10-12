@@ -16,6 +16,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -23,7 +24,10 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
@@ -46,7 +50,7 @@ fun DeviceSelectionDialog(
     state: MainDialog.DeviceSelection,
     onQueryChange: (String) -> Unit,
     onBrandSelected: (Brand) -> Unit,
-    onModelSelected: (PhoneModel) -> Unit,
+    onModelSelected: (PhoneModel, String) -> Unit,
     onBack: () -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -72,7 +76,7 @@ private fun DeviceSelectionContent(
     state: MainDialog.DeviceSelection,
     onQueryChange: (String) -> Unit,
     onBrandSelected: (Brand) -> Unit,
-    onModelSelected: (PhoneModel) -> Unit,
+    onModelSelected: (PhoneModel, String) -> Unit,
     onBack: () -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -134,6 +138,7 @@ private fun DeviceSelectionContent(
                     onBrandSelected = onBrandSelected,
                 )
                 else -> ModelList(
+                    brand = brand,
                     models = remember(state.models, state.query) { state.visibleModels },
                     onModelSelected = onModelSelected,
                 )
@@ -168,29 +173,76 @@ private fun BrandList(
     }
 }
 
+/**
+ * A model with one TAC is picked with a single tap. A model with several expands
+ * into its TACs so the user sees and chooses which one the IMEI is generated from.
+ */
 @Composable
 private fun ModelList(
+    brand: String,
     models: List<PhoneModel>,
-    onModelSelected: (PhoneModel) -> Unit,
+    onModelSelected: (PhoneModel, String) -> Unit,
 ) {
     if (models.isEmpty()) {
         CenteredHint(stringResource(R.string.device_search_empty))
         return
     }
+    // Survives the confirm dialog opening on top; reset when another brand is opened.
+    var expandedModel by remember(brand) { mutableStateOf<String?>(null) }
     LazyColumn(modifier = Modifier.fillMaxSize()) {
-        items(models, key = { it.name.lowercase() }) { model ->
-            ListItem(
-                headlineContent = { Text(model.displayName) },
-                supportingContent = {
-                    Text(
-                        text = model.tacs.singleOrNull()?.let { stringResource(R.string.device_tac, it) }
-                            ?: pluralStringResource(R.plurals.model_tac_count, model.tacs.size, model.tacs.size),
-                        fontFamily = FontFamily.Monospace,
+        for (model in models) {
+            val key = model.name.lowercase()
+            val singleTac = model.tacs.singleOrNull()
+            val isExpanded = singleTac == null && expandedModel == key
+            item(key = key) {
+                ListItem(
+                    headlineContent = { Text(model.displayName) },
+                    supportingContent = {
+                        Text(
+                            text = singleTac?.let { stringResource(R.string.device_tac, it) }
+                                ?: pluralStringResource(R.plurals.model_tac_count, model.tacs.size, model.tacs.size),
+                            fontFamily = if (singleTac != null) FontFamily.Monospace else null,
+                        )
+                    },
+                    trailingContent = {
+                        if (singleTac == null) {
+                            Icon(
+                                painter = painterResource(
+                                    if (isExpanded) R.drawable.ic_expand_less else R.drawable.ic_expand_more,
+                                ),
+                                contentDescription = null,
+                            )
+                        }
+                    },
+                    modifier = Modifier.clickable {
+                        if (singleTac != null) {
+                            onModelSelected(model, singleTac)
+                        } else {
+                            expandedModel = if (isExpanded) null else key
+                        }
+                    },
+                )
+                HorizontalDivider()
+            }
+            if (isExpanded) {
+                items(model.tacs, key = { tac -> "$key/$tac" }) { tac ->
+                    ListItem(
+                        headlineContent = {
+                            Text(
+                                text = stringResource(R.string.device_tac, tac),
+                                fontFamily = FontFamily.Monospace,
+                            )
+                        },
+                        colors = ListItemDefaults.colors(
+                            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        ),
+                        modifier = Modifier
+                            .clickable { onModelSelected(model, tac) }
+                            .padding(start = 16.dp),
                     )
-                },
-                modifier = Modifier.clickable { onModelSelected(model) },
-            )
-            HorizontalDivider()
+                    HorizontalDivider()
+                }
+            }
         }
     }
 }
@@ -237,7 +289,7 @@ private fun BrandPagePreview() {
             ),
             onQueryChange = {},
             onBrandSelected = {},
-            onModelSelected = {},
+            onModelSelected = { _, _ -> },
             onBack = {},
             onDismiss = {},
         )
@@ -259,7 +311,7 @@ private fun ModelPagePreview() {
             ),
             onQueryChange = {},
             onBrandSelected = {},
-            onModelSelected = {},
+            onModelSelected = { _, _ -> },
             onBack = {},
             onDismiss = {},
         )

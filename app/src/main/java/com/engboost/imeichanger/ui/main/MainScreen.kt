@@ -57,9 +57,10 @@ fun MainScreen(
     onAutoChangeClick: () -> Unit,
     onDeviceQueryChange: (String) -> Unit,
     onBrandSelected: (Brand) -> Unit,
-    onModelSelected: (PhoneModel) -> Unit,
+    onModelSelected: (PhoneModel, String) -> Unit,
     onDeviceSelectionBack: () -> Unit,
     onImeiChangeConfirm: () -> Unit,
+    onImeiChangeCancel: () -> Unit,
     onDialogDismiss: () -> Unit,
     onMessageShown: (Long) -> Unit,
     modifier: Modifier = Modifier,
@@ -146,12 +147,15 @@ fun MainScreen(
             onBack = onDeviceSelectionBack,
             onDismiss = onDialogDismiss,
         )
-        is MainDialog.ConfirmChange -> ConfirmChangeDialog(
-            state = dialog,
-            onConfirm = onImeiChangeConfirm,
-            onDismiss = onDialogDismiss,
-        )
         null -> Unit
+    }
+    // Composed after the dialog above, so it opens on top of it.
+    state.confirmation?.let { confirmation ->
+        ConfirmChangeDialog(
+            state = confirmation,
+            onConfirm = onImeiChangeConfirm,
+            onDismiss = onImeiChangeCancel,
+        )
     }
 
     if (state.isBusy) {
@@ -340,9 +344,10 @@ private fun MainScreenPreview() {
             onAutoChangeClick = {},
             onDeviceQueryChange = {},
             onBrandSelected = {},
-            onModelSelected = {},
+            onModelSelected = { _, _ -> },
             onDeviceSelectionBack = {},
             onImeiChangeConfirm = {},
+            onImeiChangeCancel = {},
             onDialogDismiss = {},
             onMessageShown = {},
         )

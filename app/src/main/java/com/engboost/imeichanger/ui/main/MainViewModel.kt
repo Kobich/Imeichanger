@@ -34,6 +34,7 @@ class MainViewModel(
     private data class LocalState(
         val selectedSlot: SimSlot = SimSlot.SIM1,
         val dialog: MainDialog? = null,
+        val confirmation: ChangeConfirmation? = null,
         val message: MainMessage? = null,
     )
 
@@ -56,6 +57,7 @@ class MainViewModel(
                 .filter { it.slot == slot }
                 .sortedByDescending { it.timestamp },
             dialog = local.dialog,
+            confirmation = local.confirmation,
             message = local.message,
             isBusy = isBusy,
         )
@@ -139,11 +141,10 @@ class MainViewModel(
         }
     }
 
-    fun onModelSelected(model: PhoneModel) {
-        catalogJob?.cancel()
-        // A model may have several TACs: any of them makes a plausible IMEI.
-        val device = Device(brand = model.brand, name = model.name, tac = model.tacs.random())
-        showConfirmDialog(Imei.generate(device.tac), device)
+    /** [tac] is one of [model]'s TACs, picked explicitly when the model has several. */
+    fun onModelSelected(model: PhoneModel, tac: String) {
+        val device = Device(brand = model.brand, name = model.name, tac = tac)
+        showConfirmDialog(Imei.generate(tac), device)
     }
 
     private class DeviceSelectionPage(
@@ -175,7 +176,7 @@ class MainViewModel(
     private fun showConfirmDialog(imei: String, device: Device? = null) {
         localState.update {
             it.copy(
-                dialog = MainDialog.ConfirmChange(
+                confirmation = ChangeConfirmation(
                     slot = it.selectedSlot,
                     oldImei = uiState.value.currentImei,
                     newImei = imei,
@@ -187,14 +188,20 @@ class MainViewModel(
     }
 
     fun onImeiChangeConfirm() {
-        val dialog = localState.value.dialog as? MainDialog.ConfirmChange ?: return
-        localState.update { it.copy(dialog = null) }
+        val confirmation = localState.value.confirmation ?: return
+        catalogJob?.cancel()
+        localState.update { it.copy(dialog = null, confirmation = null) }
         viewModelScope.launch {
-            repository.changeImei(dialog.slot, dialog.newImei)
+            repository.changeImei(confirmation.slot, confirmation.newImei)
             localState.update {
-                it.copy(message = MainMessage.ImeiChanged(imei = dialog.newImei, device = dialog.device))
+                it.copy(message = MainMessage.ImeiChanged(imei = confirmation.newImei, device = confirmation.device))
             }
         }
+    }
+
+    /** Cancel on "Change IMEI?" goes back to the dialog underneath. */
+    fun onImeiChangeCancel() {
+        localState.update { it.copy(confirmation = null) }
     }
 
     private inline fun <reified T : MainDialog> updateDialog(crossinline transform: (T) -> MainDialog) {

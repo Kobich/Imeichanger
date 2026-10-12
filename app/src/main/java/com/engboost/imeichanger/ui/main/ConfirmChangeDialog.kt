@@ -20,7 +20,7 @@ import com.engboost.imeichanger.ui.theme.ImeiChangerTheme
 
 @Composable
 fun ConfirmChangeDialog(
-    state: MainDialog.ConfirmChange,
+    state: ChangeConfirmation,
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -50,6 +50,12 @@ fun ConfirmChangeDialog(
                             state.device.displayName,
                             state.device.brand,
                         ),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Text(
+                        text = stringResource(R.string.device_tac, state.device.tac),
+                        fontFamily = FontFamily.Monospace,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -88,7 +94,7 @@ private val SimSlot.labelRes: Int
 private fun ConfirmChangeDialogPreview() {
     ImeiChangerTheme {
         ConfirmChangeDialog(
-            state = MainDialog.ConfirmChange(
+            state = ChangeConfirmation(
                 slot = SimSlot.SIM1,
                 oldImei = "356938035643809",
                 newImei = "490154203237518",

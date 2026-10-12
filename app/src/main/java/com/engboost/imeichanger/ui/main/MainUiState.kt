@@ -12,6 +12,7 @@ data class MainUiState(
     val originalImei: String? = null,
     val history: List<ImeiChangeRecord> = emptyList(),
     val dialog: MainDialog? = null,
+    val confirmation: ChangeConfirmation? = null,
     val message: MainMessage? = null,
     val isBusy: Boolean = false,
 ) {
@@ -43,17 +44,21 @@ sealed interface MainDialog {
         val visibleModels: List<PhoneModel>
             get() = models.filter { it.name.contains(query.trim(), ignoreCase = true) }
     }
-
-    data class ConfirmChange(
-        val slot: SimSlot,
-        val oldImei: String?,
-        val newImei: String,
-        val device: Device? = null,
-        // No change recorded for this slot yet: the current IMEI is the one remembered
-        // as original, so the user should check it against the box or *#06#.
-        val isFirstChange: Boolean = false,
-    ) : MainDialog
 }
+
+/**
+ * "Change IMEI?" shown on top of [MainUiState.dialog]: cancelling returns to that
+ * dialog (manual input or device selection), confirming closes both.
+ */
+data class ChangeConfirmation(
+    val slot: SimSlot,
+    val oldImei: String?,
+    val newImei: String,
+    val device: Device? = null,
+    // No change recorded for this slot yet: the current IMEI is the one remembered
+    // as original, so the user should check it against the box or *#06#.
+    val isFirstChange: Boolean = false,
+)
 
 enum class ManualImeiError {
     INVALID_FORMAT,
