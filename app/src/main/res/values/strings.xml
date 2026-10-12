@@ -34,6 +34,7 @@
     <string name="confirm_change_old">Current: %1$s</string>
     <string name="confirm_change_new">New: %1$s</string>
     <string name="confirm_change_button">Change</string>
+    <string name="confirm_change_original_warning">First change on this slot: %1$s will be saved as the factory IMEI, and Reset will restore it. Make sure it matches the box or *#06#.</string>
 
     <string name="message_imei_changed">IMEI changed: %1$s</string>
     <string name="message_device_imei_changed">%1$s (%2$s): IMEI changed to %3$s</string>

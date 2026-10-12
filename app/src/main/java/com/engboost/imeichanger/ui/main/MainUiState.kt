@@ -35,6 +35,9 @@ sealed interface MainDialog {
         val oldImei: String?,
         val newImei: String,
         val device: Device? = null,
+        // No change recorded for this slot yet: the current IMEI is the one remembered
+        // as original, so the user should check it against the box or *#06#.
+        val isFirstChange: Boolean = false,
     ) : MainDialog
 }
 

@@ -152,6 +152,7 @@ class MainViewModel(
                     oldImei = uiState.value.currentImei,
                     newImei = imei,
                     device = device,
+                    isFirstChange = uiState.value.history.isEmpty(),
                 ),
             )
         }

@@ -2,11 +2,13 @@ package com.engboost.imeichanger.ui.main
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.tooling.preview.Preview
@@ -52,6 +54,14 @@ fun ConfirmChangeDialog(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
+                if (state.isFirstChange && state.oldImei != null) {
+                    Text(
+                        text = stringResource(R.string.confirm_change_original_warning, state.oldImei),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.padding(top = 8.dp),
+                    )
+                }
             }
         },
         confirmButton = {
@@ -82,6 +92,7 @@ private fun ConfirmChangeDialogPreview() {
                 slot = SimSlot.SIM1,
                 oldImei = "356938035643809",
                 newImei = "490154203237518",
+                isFirstChange = true,
             ),
             onConfirm = {},
             onDismiss = {},
