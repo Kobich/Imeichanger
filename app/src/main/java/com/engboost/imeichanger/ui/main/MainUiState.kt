@@ -1,5 +1,6 @@
 package com.engboost.imeichanger.ui.main
 
+import com.engboost.imeichanger.data.ImeiChangeException
 import com.engboost.imeichanger.domain.Brand
 import com.engboost.imeichanger.domain.Device
 import com.engboost.imeichanger.domain.ImeiChangeRecord
@@ -72,6 +73,11 @@ sealed interface MainMessage {
     data class ImeiChanged(
         val imei: String,
         val device: Device? = null,
+        override val id: Long = System.nanoTime(),
+    ) : MainMessage
+
+    data class ImeiChangeFailed(
+        val reason: ImeiChangeException.Reason,
         override val id: Long = System.nanoTime(),
     ) : MainMessage
 }

@@ -8,6 +8,7 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.engboost.imeichanger.data.AssetDeviceCatalog
 import com.engboost.imeichanger.data.DeviceCatalog
+import com.engboost.imeichanger.data.ImeiChangeException
 import com.engboost.imeichanger.data.ImeiRepository
 import com.engboost.imeichanger.data.ImeiStorage
 import com.engboost.imeichanger.data.PhoneExImeiRepository
@@ -73,8 +74,10 @@ class MainViewModel(
 
     fun onResetImeiClick() {
         val slot = localState.value.selectedSlot
-        viewModelScope.launch {
+        val original = uiState.value.originalImei ?: return
+        runImeiChange {
             repository.resetImei(slot)
+            MainMessage.ImeiChanged(imei = original)
         }
     }
 
@@ -191,11 +194,21 @@ class MainViewModel(
         val confirmation = localState.value.confirmation ?: return
         catalogJob?.cancel()
         localState.update { it.copy(dialog = null, confirmation = null) }
-        viewModelScope.launch {
+        runImeiChange {
             repository.changeImei(confirmation.slot, confirmation.newImei)
-            localState.update {
-                it.copy(message = MainMessage.ImeiChanged(imei = confirmation.newImei, device = confirmation.device))
+            MainMessage.ImeiChanged(imei = confirmation.newImei, device = confirmation.device)
+        }
+    }
+
+    /** Runs a change and reports [change]'s message on success, or why it failed. */
+    private fun runImeiChange(change: suspend () -> MainMessage) {
+        viewModelScope.launch {
+            val message = try {
+                change()
+            } catch (e: ImeiChangeException) {
+                MainMessage.ImeiChangeFailed(e.reason)
             }
+            localState.update { it.copy(message = message) }
         }
     }
 

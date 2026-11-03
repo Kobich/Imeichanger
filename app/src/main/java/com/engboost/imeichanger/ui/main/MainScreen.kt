@@ -20,6 +20,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
@@ -36,6 +37,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.engboost.imeichanger.R
+import com.engboost.imeichanger.data.ImeiChangeException
 import com.engboost.imeichanger.domain.Brand
 import com.engboost.imeichanger.domain.ImeiChangeRecord
 import com.engboost.imeichanger.domain.PhoneModel
@@ -69,7 +71,10 @@ fun MainScreen(
     val context = LocalContext.current
     LaunchedEffect(state.message) {
         val message = state.message ?: return@LaunchedEffect
-        snackbarHostState.showSnackbar(message.text(context))
+        snackbarHostState.showSnackbar(
+            message = message.text(context),
+            duration = if (message is MainMessage.ImeiChangeFailed) SnackbarDuration.Long else SnackbarDuration.Short,
+        )
         onMessageShown(message.id)
     }
 
@@ -316,6 +321,13 @@ private fun MainMessage.text(context: android.content.Context): String = when (t
     } else {
         context.getString(R.string.message_imei_changed, imei)
     }
+    is MainMessage.ImeiChangeFailed -> context.getString(
+        when (reason) {
+            ImeiChangeException.Reason.SEND_FAILED -> R.string.message_change_rejected
+            ImeiChangeException.Reason.NOT_VERIFIED -> R.string.message_change_not_verified
+            ImeiChangeException.Reason.NOT_APPLIED -> R.string.message_change_not_applied
+        },
+    )
 }
 
 @Preview(showBackground = true)

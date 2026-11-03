@@ -80,10 +80,12 @@ class PhoneExImeiRepository(
     override suspend fun changeImei(slot: SimSlot, newImei: String): Unit = modemSession {
         val oldImei = _currentImeis.value[slot]
         if (oldImei == newImei) return@modemSession
-        writeImei(slot, newImei)
-        val readBack = readImei(slot) ?: newImei
-        rememberOriginal(slot, oldImei ?: readBack)
+        if (!writeImei(slot, newImei)) throw ImeiChangeException(ImeiChangeException.Reason.SEND_FAILED)
+        // Only what the modem reports back counts: nothing is recorded on a guess.
+        val readBack = readImei(slot) ?: throw ImeiChangeException(ImeiChangeException.Reason.NOT_VERIFIED)
         _currentImeis.update { it + (slot to readBack) }
+        if (readBack != newImei) throw ImeiChangeException(ImeiChangeException.Reason.NOT_APPLIED)
+        if (oldImei != null) rememberOriginal(slot, oldImei)
         _history.update {
             it + ImeiChangeRecord(
                 slot = slot,
@@ -155,16 +157,19 @@ class PhoneExImeiRepository(
 
     /**
      * Proven write sequence: radio off -> write -> reboot modem. Caller reads back.
+     * Returns false if phoneEx rejected a command (the IMEI is then unchanged).
      * NonCancellable: aborting after CFUN=0 would leave the radio switched off.
      */
-    private suspend fun writeImei(slot: SimSlot, imei: String) = withContext(NonCancellable) {
-        val type = slot.egmrType
-        sendRaw(PHONE_SLOT, "AT+CFUN=0")
+    private suspend fun writeImei(slot: SimSlot, imei: String): Boolean = withContext(NonCancellable) {
+        // Rejected here (e.g. no permission): nothing was touched, stop right away.
+        if (!sendRaw(PHONE_SLOT, "AT+CFUN=0")) return@withContext false
         delay(WRITE_STEP_DELAY_MS)
-        sendRaw(PHONE_SLOT, "AT+EGMR=1,$type,\"$imei\"")
+        val written = sendRaw(PHONE_SLOT, "AT+EGMR=1,${slot.egmrType},\"$imei\"")
         delay(WRITE_STEP_DELAY_MS)
+        // Radio goes back on even if the write was rejected.
         sendRaw(PHONE_SLOT, "AT+CFUN=1,1")
         delay(MODEM_REBOOT_DELAY_MS)
+        written
     }
 
     /** Blocking send that waits for the modem's onAtCmdResp (or times out). */
@@ -190,14 +195,19 @@ class PhoneExImeiRepository(
         }
     }
 
-    /** Fire-and-forget send used inside the write sequence (reply only logged). */
-    private fun sendRaw(slot: Int, cmd: String) {
+    /**
+     * Fire-and-forget send used inside the write sequence (reply only logged).
+     * Returns false if phoneEx rejected the call, e.g. with a SecurityException.
+     */
+    private fun sendRaw(slot: Int, cmd: String): Boolean {
         ensureProbed()
         val callback = OemHookCallback(layout = layout)
-        try {
+        return try {
             PhoneExClient.sendAtCommand(slot = slot, token = 0L, atCmd = cmd, callback = callback)
+            true
         } catch (e: Exception) {
             Log.e(TAG, "phoneEx send '$cmd' failed: ${e.javaClass.simpleName}: ${e.message}")
+            false
         }
     }
 
