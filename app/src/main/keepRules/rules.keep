@@ -1,12 +1,12 @@
-# Add project specific R8 rules here.
-# AGP will combine all keep rule files in src/main/keepRules to pass to R8
-#
-# For more details, see
-#   https://d.android.com/r/tools/r8/keep-rules
+# Project R8 rules. AGP passes every file in src/main/keepRules to R8.
+# See https://d.android.com/r/tools/r8/keep-rules
 
-# If your project uses WebView with JS, uncomment the following
-# and specify the fully qualified class name to the JavaScript interface
-# class:
-#-keepclassmembers class fqcn.of.javascript.interface.for.webview {
-#   public *;
-#}
+# imei_state.json stores slots by enum name ("SIM1", "SIM2"): keep the constant
+# names so files written by one build are read by the next.
+-keep enum com.engboost.imeichanger.domain.SimSlot { *; }
+
+# Everything else needs no rules:
+# - reflection only targets framework classes by string name (ServiceManager,
+#   com.mediatek.telephony.IOemHookCallback), which R8 does not touch;
+# - OemHookCallback is identified to phoneEx by its descriptor string, not by
+#   its class name, and its Binder.onTransact override is kept automatically.

@@ -21,8 +21,11 @@ android {
 
     buildTypes {
         release {
+            // R8: shrinks and obfuscates the code we hand out as an APK. Keep rules
+            // live in src/main/keepRules/; mapping.txt in build/outputs/mapping/release/
+            // decodes obfuscated stack traces — keep it, don't ship it.
             optimization {
-                enable = false
+                enable = true
             }
         }
     }
