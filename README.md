@@ -3,6 +3,8 @@
 Android-приложение для смены IMEI на устройствах MediaTek. Работает через скрытый
 системный сервис `phoneEx`, которому передаёт AT-команды для модема.
 
+Подробное описание приложения связным текстом, как основа для документации:
+[docs/app-description.md](docs/app-description.md).
 Подробно про AT-команды и binder-протокол: [docs/at-commands.md](docs/at-commands.md).
 
 ## Что умеет
