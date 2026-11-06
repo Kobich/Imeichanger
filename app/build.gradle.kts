@@ -21,12 +21,14 @@ android {
 
     buildTypes {
         release {
-            // R8: shrinks and obfuscates the code we hand out as an APK. Keep rules
-            // live in src/main/keepRules/; mapping.txt in build/outputs/mapping/release/
-            // decodes obfuscated stack traces — keep it, don't ship it.
-            optimization {
-                enable = true
-            }
+            // R8: shrinks and obfuscates the code we hand out as an APK.
+            // mapping.txt in build/outputs/mapping/release/ decodes obfuscated stack
+            // traces — keep it for every release, don't ship it.
+            isMinifyEnabled = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "src/main/keepRules/rules.keep",
+            )
         }
     }
     compileOptions {

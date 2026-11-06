@@ -1,4 +1,4 @@
-# Project R8 rules. AGP passes every file in src/main/keepRules to R8.
+# Project R8 rules, passed to R8 from app/build.gradle.kts (proguardFiles).
 # See https://d.android.com/r/tools/r8/keep-rules
 
 # imei_state.json stores slots by enum name ("SIM1", "SIM2"): keep the constant
