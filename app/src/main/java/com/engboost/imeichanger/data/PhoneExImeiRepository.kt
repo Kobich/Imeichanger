@@ -82,7 +82,8 @@ class PhoneExImeiRepository(
         if (oldImei == newImei) return@modemSession
         if (!writeImei(slot, newImei)) throw ImeiChangeException(ImeiChangeException.Reason.SEND_FAILED)
         // Only what the modem reports back counts: nothing is recorded on a guess.
-        val readBack = readImei(slot) ?: throw ImeiChangeException(ImeiChangeException.Reason.NOT_VERIFIED)
+        val readBack = readImeiAfterReboot(slot)
+            ?: throw ImeiChangeException(ImeiChangeException.Reason.NOT_VERIFIED)
         _currentImeis.update { it + (slot to readBack) }
         if (readBack != newImei) throw ImeiChangeException(ImeiChangeException.Reason.NOT_APPLIED)
         if (oldImei != null) rememberOriginal(slot, oldImei)
@@ -153,6 +154,19 @@ class PhoneExImeiRepository(
         val imei = resp?.let(::parseImei)
         Log.i(TAG, "readImei $slot (type=${slot.egmrType}) raw='$resp' parsed=$imei")
         return imei
+    }
+
+    /**
+     * After AT+CFUN=1,1 the modem reboots and doesn't answer for a while, and how long
+     * varies between devices: poll until it reports an IMEI instead of reading once.
+     */
+    private suspend fun readImeiAfterReboot(slot: SimSlot): String? {
+        repeat(READBACK_ATTEMPTS) { attempt ->
+            readImei(slot)?.let { return it }
+            Log.i(TAG, "read-back $slot: no answer yet (attempt ${attempt + 1}/$READBACK_ATTEMPTS)")
+            if (attempt < READBACK_ATTEMPTS - 1) delay(READBACK_RETRY_DELAY_MS)
+        }
+        return null
     }
 
     /**
@@ -232,6 +246,10 @@ class PhoneExImeiRepository(
         const val RESPONSE_TIMEOUT_MS = 5_000L
         const val WRITE_STEP_DELAY_MS = 1_000L
         const val MODEM_REBOOT_DELAY_MS = 3_000L
+
+        // Read-back polling after the modem reboot: up to ~40 s if every read times out.
+        const val READBACK_ATTEMPTS = 6
+        const val READBACK_RETRY_DELAY_MS = 2_000L
 
         // Modem echoes e.g. +EGMR: "353332990071343" (quoted) or a bare run of
         // digits; grab the first 15-digit group either way.
